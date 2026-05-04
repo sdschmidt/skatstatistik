@@ -1,6 +1,6 @@
 # Skatstatistik — Design Document
 
-Status: draft, pre-implementation. Decisions below are recommendations; nothing is built yet.
+Status: build spec. Stack and data model are locked. Implementation begins next.
 
 Reference: existing Google Sheets implementation at
 <https://docs.google.com/spreadsheets/d/11onUP0lXANQfPYg49CLQLXRpRx8tVdZF6ZnlapiC3u4/edit>.
@@ -9,24 +9,26 @@ Reference: existing Google Sheets implementation at
 
 ## 1. Domain
 
-- **Spieltag** — one match day, identified by `datum`. Multiple players play multiple `runden` (rounds) and accrue `bommel` (penalty markers).
-- **Player** — identified by `kürzel` (short handle, e.g. `SS`). Has an optional `name`.
+- **Spieltag** — one match day, identified by `datum`. Multiple players each play `runden` (rounds) and accrue `bommel` (penalty markers).
+- **Player** — identified by `kürzel`. Has an optional `name`. Players are never deleted through the UI (rename only). *Player ≠ user.*
 - **Ergebnis** — one player's result on one Spieltag: `(bommel, runden)`.
 
-### Aggregations (per year: 2023, 2024, 2025, current year)
+### Per-year aggregation (2020 → current year)
 
-Per player:
+Per player, in a given year:
 
 | Field | Definition |
 | --- | --- |
 | `kürzel` | from players |
-| `name` | from players |
-| `spieltage` | count of distinct `datum` the player participated in (in the year) |
-| `runden` | sum of all `runden` (in the year) |
-| `bommel/runde` | `sum(bommel) / sum(runden)` |
-| `Anwesenheit` | player's `spieltage` ÷ total distinct `datum` in that year |
+| `name` | from players (nullable) |
+| `spieltage` | distinct `datum` the player participated in |
+| `runden` | sum |
+| `bommel` | sum |
+| `bommel_per_runde` | `sum(bommel) / sum(runden)` |
+| `gewinnrate` | `(sum(runden) − sum(bommel)) / sum(runden)` |
+| `anwesenheit` | player's `spieltage` ÷ total distinct `datum` that year |
 
-Designed to be filterable later (date range, subset of players, min rounds, etc.).
+Computed in a Postgres view (`player_stats_by_year`); UI filters layer on top.
 
 ---
 
@@ -34,166 +36,215 @@ Designed to be filterable later (date range, subset of players, min rounds, etc.
 
 ```
 players
-  id            uuid pk
+  id            uuid primary key default gen_random_uuid()
   kürzel        text unique not null
-  name          text                    -- nullable: kürzel can be added on the fly
+  name          text                       -- nullable; imported verbatim from sheet
   created_at    timestamptz default now()
 
 spieltage
-  id            uuid pk
-  datum         date unique not null
-  photo_path    text                    -- storage key, nullable
+  datum         date primary key           -- one Spieltag per day, enforced by PK
+  photo_path    text                       -- storage key, nullable
   notes         text
   created_at    timestamptz default now()
 
 ergebnisse
-  id            uuid pk
-  spieltag_id   uuid fk -> spieltage(id) on delete cascade
-  player_id     uuid fk -> players(id)  on delete restrict
+  datum         date references spieltage(datum) on delete cascade
+  player_id     uuid references players(id)     on delete restrict
   bommel        integer not null check (bommel >= 0)
   runden        integer not null check (runden  >= 0)
-  unique(spieltag_id, player_id)
+  primary key (datum, player_id)
 ```
 
-Notes:
-- `datum` has a unique constraint — one Spieltag per calendar day. Loosen if needed.
-- `name` is nullable so a kürzel can be created mid-entry and filled in later from the Players view.
-- Cascade deletes from `spieltage` so a Spieltag deletion removes its results, but `restrict` on player deletion (you must reassign / delete results first).
+Why this shape:
+- `datum` as natural PK on `spieltage` — "one Spieltag per day" is enforced by the schema, no surrogate id needed.
+- `(datum, player_id)` composite PK on `ergebnisse` — prevents double-entering a player on a Spieltag.
+- `on delete cascade` from `spieltage` → `ergebnisse`: deleting a Spieltag removes its results.
+- `on delete restrict` from `players` → `ergebnisse`: defensive; the UI never offers a Player-delete button anyway.
 
-### Aggregation as a SQL view
+### Auth tables
 
-A view `player_stats_by_year(year, player_id, kürzel, name, spieltage, runden, bommel, bommel_per_runde, anwesenheit)` keeps all aggregation logic on the database side. Filter by `year` and join in the UI.
+`better-auth` manages `user`, `session`, `account`, `verification`. We extend the `user` table with a role column:
+
+```sql
+alter table "user" add column role text not null default 'pending'
+  check (role in ('pending','user','admin'));
+```
+
+On first sign-in, the user whose email matches `ADMIN_EMAIL` is auto-promoted to `admin` (no approval flow needed).
+
+### Aggregation view
+
+```sql
+create view player_stats_by_year as
+select
+  extract(year from e.datum)::int                                 as year,
+  p.id                                                            as player_id,
+  p.kürzel,
+  p.name,
+  count(distinct e.datum)                                         as spieltage,
+  sum(e.runden)::int                                              as runden,
+  sum(e.bommel)::int                                              as bommel,
+  sum(e.bommel)::numeric / nullif(sum(e.runden), 0)               as bommel_per_runde,
+  (sum(e.runden) - sum(e.bommel))::numeric
+    / nullif(sum(e.runden), 0)                                    as gewinnrate,
+  count(distinct e.datum)::numeric
+    / nullif((select count(*) from spieltage s
+              where extract(year from s.datum) = extract(year from e.datum)), 0)
+                                                                  as anwesenheit
+from ergebnisse e
+join players p on p.id = e.player_id
+group by 1, 2, 3, 4;
+```
 
 ---
 
-## 3. Backend options
+## 3. Stack (locked)
 
-| Option | Pros | Cons | Verdict |
+| Layer | Choice |
+| --- | --- |
+| Frontend & server | **SvelteKit** (Node adapter) |
+| Database | **Postgres 16** |
+| ORM | **Drizzle** |
+| Migrations | **drizzle-kit** |
+| Auth | **better-auth** — Google OAuth + email magic link, **no password** |
+| Email | **Mailpit** in dev *and* prod (SMTP catcher). Mail is captured to its local web UI (`:8025`), **never relayed externally**. To enable real delivery later, swap `mailpit` for any SMTP relay via the same `SMTP_*` env vars — no app code change. |
+| CSS | **TailwindCSS** |
+| Components | **Flowbite Svelte** |
+| Charts | **ApexCharts** (via Flowbite chart components) |
+| File storage | docker volume `/data/photos`, served via SvelteKit endpoint with auth check |
+| Containers | `app` + `db` (+ `mailpit` for dev) — single `docker compose up` |
+
+UI is German throughout. Date format: `DD.MM.YYYY`.
+
+---
+
+## 4. Auth & roles
+
+### Sign-up flow
+
+1. User signs in with Google **or** requests an email magic link.
+2. better-auth creates the user with `role = 'pending'`.
+3. User sees a *„Warte auf Freigabe durch einen Admin"* screen.
+4. An admin opens `/admin/users`, finds the pending user, clicks *Freigeben* → role becomes `user` (or `admin` if explicitly promoted).
+5. The approved user is emailed *„Dein Konto wurde freigegeben."*
+6. **Special case:** the email matching `ADMIN_EMAIL` is auto-promoted to `admin` on first sign-in — no approval needed.
+
+### Magic-link delivery in prod
+
+Because Mailpit is in use in prod, magic-link emails are captured locally and never reach external inboxes. The practical consequences:
+
+- **Google OAuth is the only fully-functional sign-in path for end users.**
+- Magic link only works if an admin reads the Mailpit web UI (`:8025`) and forwards the link by hand, or if users have direct access to the Mailpit UI.
+- To enable normal magic-link delivery, replace the `mailpit` service with any SMTP relay (Resend / Postmark / SES / Mailgun / your own SMTP); only the `SMTP_*` env vars change.
+
+### Permissions
+
+| Action | pending | user | admin |
 | --- | --- | --- | --- |
-| **Supabase** | Managed Postgres, auth (Google + email + magic link + ~15 OAuth providers), Storage for photos, RLS, generous free tier, self-hostable if needed | Some lock-in to client SDK conventions | **Recommended** |
-| Firebase | Mature, Google-native auth, great mobile story | NoSQL (Firestore) is awkward for relational stats; Storage + Functions extra wiring | Skip for relational data |
-| Pocketbase | Single Go binary, SQLite, OAuth + email built-in, file storage | Smaller community; less mature than Postgres tooling | Fine if you want self-host minimal |
-| Custom (Hono/Fastify + Postgres + Lucia or Auth.js) | Total control | The most code to write and maintain for the smallest app | Skip unless you specifically want to build auth |
-
-**Why Supabase:** all four pieces you asked for (Google OAuth, email auth, photo upload, persisted relational data) are first-class, Postgres views give you the year aggregations as a one-liner, and RLS handles the "only logged-in members can read/write" check without bespoke middleware.
-
----
-
-## 4. Frontend options
-
-| Option | Pros | Cons |
-| --- | --- | --- |
-| **SvelteKit** | Compact, fast, simple file-based routing, official Supabase auth helpers | Smaller component ecosystem than React |
-| Next.js (App Router) | Largest ecosystem, `@supabase/ssr` first-class | Heavier than this app needs |
-| Remix / React Router 7 | Web-platform-leaning, good form story | Smaller community |
-| Vite + React (SPA) | Lean, no SSR tax | More wiring for protected routes |
-
-**Recommended:** SvelteKit. **Alternative:** Next.js if you'd prefer the React ecosystem or already know it.
-
-UI library suggestions: `shadcn-svelte` (or `shadcn/ui` for Next), or stay vanilla with TailwindCSS — this app has maybe 6 screens, so a heavy component lib is overkill.
+| Read everything | — | ✓ | ✓ |
+| Create Spieltag | — | ✓ | ✓ |
+| Add Player (kürzel) | — | ✓ | ✓ |
+| Edit Spieltag | — | — | ✓ |
+| Edit Player (rename) | — | — | ✓ |
+| Delete Spieltag | — | — | ✓ |
+| **Delete Player** | — | — | **— (not exposed in UI)** |
+| Approve / promote / demote users | — | — | ✓ |
 
 ---
 
-## 5. Authentication
+## 5. Photos
 
-Supabase supports out of the box:
-
-- **Google OAuth** — you asked for this.
-- **Email + password**.
-- **Email magic link** (passwordless; nicer UX, recommended over password).
-- Also available with one config line each: Apple, GitHub, Microsoft/Azure, Discord, Facebook, Twitter/X, LinkedIn, Slack, Spotify, Twitch, Notion, Zoom, Bitbucket, GitLab, Figma, Kakao, Keycloak, WorkOS, Phone OTP (SMS), Anonymous, custom SAML SSO.
-
-**Recommended starter set:** Google + magic link. Add password if some users don't have Google accounts.
-
-### Authorization model — open question
-
-Two reasonable shapes:
-
-1. **Shared data, group of users.** Anyone signed in can read; admins (a `members` table with a role) can write. Best if your Skat group all want to see the same stats. *Default assumption.*
-2. **Per-user data.** Each authenticated user has their own private dataset. RLS scoped by `auth.uid()`. Best if you're building this as a multi-tenant SaaS.
-
-I've drafted this for option 1. Tell me if you want option 2.
+- Stored on docker volume `/data/photos`, one file per Spieltag at `/data/photos/<YYYY-MM-DD>.<ext>`.
+- Persist only the relative path on `spieltage.photo_path`.
+- Served via a SvelteKit endpoint that checks the request is authenticated and the user is not `pending`.
+- Client-side downscale to ~2000 px long edge before upload to keep storage small.
+- Accepted: JPEG, PNG, HEIC. Cap ~5 MB after downscale.
 
 ---
 
-## 6. Photos
+## 6. Screens (German UI)
 
-- Bucket: `spieltag-photos` in Supabase Storage.
-- One photo per Spieltag, stored at `spieltage/<spieltag_id>.<ext>`.
-- Persist only the storage path on `spieltage.photo_path`; resolve to a signed URL at read time.
-- No OCR for now (per spec). Photo is just a visual record of the day's tally sheet.
-- Max ~5 MB, accept JPEG/PNG/HEIC, downscale on the client to ~2000 px long edge before upload to keep storage small.
+### 6.1 `/spieltage/new` — Neuer Spieltag *(user, admin)*
+Datum (default today) · Foto (optional, drag-drop with preview) · Notizen · Spieler-Tabelle: combobox by kürzel/name with inline *„+ neuen Spieler anlegen"* fallback, plus bommel/runden inputs per row · Submit creates Spieltag + Ergebnisse atomically.
 
----
+### 6.2 `/spieltage/<datum>` — Spieltag-Detail *(read for all signed-in)*
+Datum · Foto · Notizen · Tabelle der Ergebnisse. *Admins* see *Bearbeiten* and *Löschen* buttons.
 
-## 7. Screens / UX
+### 6.3 `/spieltage` — Liste
+Reverse-chronological. Datum, Anzahl Spieler, Σ Runden, Foto-Thumbnail. Click → detail.
 
-### 7.1 New Spieltag (`/spieltage/new`)
-- **Datum** (date picker, default today)
-- **Foto** (optional; drag-drop or file input; preview)
-- **Notizen** (optional)
-- **Spieler** section — one row per participant:
-  - Combobox: filterable by kürzel or name. Bottom of the list: *"+ neuen Spieler anlegen: '<typed text>'"* — creates a player with that kürzel and `name = null` inline. Can be filled in later from Players view.
-  - `bommel` (number)
-  - `runden` (number)
-  - Remove-row button
-- **+ Spieler** button to add a row.
-- Submit creates the Spieltag and its Ergebnisse atomically.
+### 6.4 `/` — Statistik
+Year tabs (2020 → current). Sortable table from `player_stats_by_year`. Charts: Bommel/Runde per Spieler (Balken), Anwesenheit (Balken), trend over years (Linie). Filters added incrementally.
 
-### 7.2 Spieltag detail (`/spieltage/[id]`)
-- Datum, Foto (if any), Notizen, table of players' results.
-- "Bearbeiten" → edit form (same as new, preloaded).
-- "Löschen" → confirmation dialog → deletes Spieltag + results.
+### 6.5 `/spieler` — Spieler verwalten
+List: kürzel, name, all-time Spieltage. *Admins* can rename. *Users* can add new kürzel. **No delete.**
 
-### 7.3 Spieltag list (`/spieltage`)
-- Reverse-chronological table. Date, # players, total Runden, thumbnail. Click → detail.
+### 6.6 `/admin/users` — Benutzer verwalten *(admin only)*
+Pending-Liste mit *Freigeben*. Aktive Benutzer mit Rollenwechsel.
 
-### 7.4 Statistik (`/`)
-- Year tabs: **2023**, **2024**, **2025**, **2026** (current).
-- Table from `player_stats_by_year`. Sortable columns. Filter inputs (player multi-select, min Spieltage, etc.) on the side — added incrementally.
-
-### 7.5 Spieler (`/spieler`)
-- List of players: kürzel, name, total Spieltage all-time.
-- Inline edit name.
-- Add new player.
-- Delete (only if no results).
-
-### 7.6 Auth (`/auth`)
-- "Mit Google anmelden" button.
-- Email field → "Magic Link senden".
-- Optional password fallback.
+### 6.7 `/auth` — Anmelden
+„Mit Google anmelden" · E-Mail-Feld → „Magic Link senden". Pending-Screen wenn anwendbar.
 
 ---
 
-## 8. Architecture feedback
+## 7. Sheet import
 
-Things worth flagging now:
+One-time seed driven by the existing Google Sheet:
 
-- **Aggregations belong in SQL.** Year filters, per-player joins, and ratios all collapse to a single view. Doing this in JavaScript is fine for 100 Spieltage but starts to bite the moment you want filters.
-- **Surrogate IDs over natural keys.** `spieltage.id` (uuid) + unique on `datum` keeps you flexible if you ever want two events the same day, and avoids fragile foreign keys to a date.
-- **Unique constraint `(spieltag_id, player_id)`** prevents accidentally double-entering a player on a Spieltag.
-- **Photo upload latency.** Client-side downscale before upload — a phone shot is 4 MB+, and you don't need that resolution.
-- **Anwesenheit denominator.** "All distinct dates" should be all `spieltage.datum` in the selected year — not all dates a player ever attended. Make this explicit in the view definition; it's the easy thing to get wrong.
-- **Auth scope.** Decide question §5 before writing RLS policies — getting it wrong later means a data migration.
-- **Time zone.** `datum` is `date` (no time, no zone) — fine, but make sure form submission doesn't accidentally shift via UTC conversion. Stick to local-date strings end to end.
-- **Don't over-engineer.** Six screens, one user group, a few hundred rows. SvelteKit + Supabase + a couple of forms is the whole app. Resist adding TanStack Query, state machines, etc. until you feel pain.
-- **One Postgres view per concern**, not one giant view. `player_stats_by_year` is one; if you later add `bommel_streaks`, that's a separate view.
+- **607 raw rows** from the `Daten` tab → `spieltage` (one row per distinct `datum`) + `ergebnisse` (one row per `(datum, kürzel)`).
+- **33 player rows** from the `Kürzel` tab → `players`. `name` imported **verbatim** — even when it's a date or `?` placeholder. You can rename later in `/spieler`.
+- Any kürzel that appears in `Daten` but is missing from `Kürzel` is auto-added to `players` with `name = NULL`.
+- German date `DD.MM.YYYY` is parsed to ISO.
+- The CSVs of `Daten` and `Kürzel` are checked in to `seed/` so the import is reproducible without re-fetching the Sheet.
+- `pnpm seed` is **idempotent** — safe to run multiple times.
+
+Sheet header reports **530 Spieltage / 1801 Runden** total — used as a sanity assertion at the end of the seed run.
 
 ---
 
-## 9. Open decisions before implementation
+## 8. Dev / runtime
 
-1. Stack: SvelteKit + Supabase (default) or substitute? **→ confirm**
-2. Auth scope: shared group data (default) or per-user? **→ confirm**
-3. Auth providers to enable in v1: Google + magic link (default), add password? **→ confirm**
-4. Hosting: Vercel (SvelteKit) + Supabase cloud, or self-host? **→ confirm**
-5. Language of UI: German throughout (matches the domain terms)? **→ confirm**
+```yaml
+# docker-compose.yml (sketch)
+services:
+  app:      # SvelteKit Node server, exposes :3000
+  db:       # postgres:16, volume pgdata
+  mailpit:  # dev profile only — SMTP :1025, web UI :8025
+volumes:
+  pgdata:
+  photos:
+```
+
+`pnpm dev` runs SvelteKit's dev server natively and talks to dockerized `db` + `mailpit`. `docker compose up` (no profile) for a prod-shaped run.
+
+### Required env vars
+
+| Var | Notes |
+| --- | --- |
+| `DATABASE_URL` | `postgres://…` |
+| `BETTER_AUTH_SECRET` | random 32+ bytes |
+| `BETTER_AUTH_URL` | public origin, e.g. `http://localhost:3000` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from Google Cloud Console |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | mailpit in dev; any relay in prod |
+| `ADMIN_EMAIL` | first admin, auto-promoted on sign-in |
+
+A committed `.env.example` documents all of them.
+
+---
+
+## 9. Architecture notes
+
+- **Aggregations live in SQL.** Year filters, ratios, and Anwesenheit collapse to one view; client-side aggregation invites bugs.
+- **`datum` denominator pitfall.** `Anwesenheit` divides by *all* distinct dates in the year (from `spieltage`), not the player's own dates. Encoded explicitly in the view.
+- **Time zone.** `datum` is `date` (no time, no zone). Form submissions stay as local-date strings; never convert through UTC.
+- **No premature flexibility.** Six screens, ~30 players, low-hundreds Spieltage. SvelteKit + a few forms is the whole app — resist TanStack Query, Zustand, microservices, etc.
+- **Lock-in.** Self-hosted on Docker; data is plain Postgres + a volume. Move anywhere with `pg_dump` + `cp -r /data/photos`.
 
 ---
 
 ## 10. Roadmap
 
-- **v0** — repo, design doc, README *(this commit)*.
-- **v1** — schema migrations, auth, Spieltag CRUD with photo, Players view, year stats table.
-- **v1.1** — filters on the stats page, sortable columns.
-- **v2** — additional aggregations (per-month, head-to-head), CSV export, OCR for photos if useful.
+- **v0** — design doc, README, gitignore *(committed: `100fb2d`)*.
+- **v1** — repo scaffold, Docker compose, schema migrations, auth + role gates, Spieltag CRUD with photo, Players view, year-stats table + charts, sheet import seed.
+- **v1.1** — filters and sortable columns on stats, more chart types.
+- **v2** — head-to-head, per-month aggregations, CSV export, OCR for the photos if useful.
