@@ -191,14 +191,14 @@ Pending-Liste mit *Freigeben*. Aktive Benutzer mit Rollenwechsel.
 
 One-time seed driven by the existing Google Sheet:
 
-- **607 raw rows** from the `Daten` tab → `spieltage` (one row per distinct `datum`) + `ergebnisse` (one row per `(datum, kürzel)`).
-- **33 player rows** from the `Kürzel` tab → `players`. `name` imported **verbatim** — even when it's a date or `?` placeholder. You can rename later in `/spieler`.
-- Any kürzel that appears in `Daten` but is missing from `Kürzel` is auto-added to `players` with `name = NULL`.
-- German date `DD.MM.YYYY` is parsed to ISO.
-- The CSVs of `Daten` and `Kürzel` are checked in to `seed/` so the import is reproducible without re-fetching the Sheet.
+- **604 raw entries** from the `Daten` tab → `spieltage` (one row per distinct `datum`) + `ergebnisse` (one row per `(datum, kürzel)`).
+- **32 player rows** from the `Kürzel` tab → `players`. `name` imported **verbatim** — even when it's a date or `?` placeholder. You can rename later in `/spieler`.
+- Any kürzel appearing in `Daten` but missing from `Kürzel` is auto-added to `players` with `name = NULL`.
+- Date formats `DD.MM.YYYY` and `YYYY-MM-DD` (sheet has both) are normalised to ISO.
+- The CSVs of `Daten` and `Kürzel` are checked in to `seed/` so import is reproducible without re-fetching the Sheet.
 - `pnpm seed` is **idempotent** — safe to run multiple times.
 
-Sheet header reports **530 Spieltage / 1801 Runden** total — used as a sanity assertion at the end of the seed run.
+Sanity assertion at the end of the seed: **85 distinct dates, 604 ergebnisse, 2090 runden total**. (One Spieltag is dated `1924-12-02` — a typo in the source sheet for `2024-12-02`. Imported as-is; rename via the UI when convenient. The Daten tab's printed `530 / 1801` header was a stale filter-formula cache, not the actual totals.)
 
 ---
 

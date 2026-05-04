@@ -63,6 +63,13 @@ docker compose up --build
 # app on :3000, mailpit web UI on :8025
 ```
 
+Seed historical data from the existing Google sheet (one-time, idempotent — safe to re-run):
+
+```sh
+pnpm seed
+# imports 32 players, 85 Spieltage, 604 Ergebnisse, 2090 Runden total
+```
+
 ## Required env vars
 
 See [`.env.example`](./.env.example). At minimum:
