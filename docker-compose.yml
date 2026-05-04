@@ -1,0 +1,50 @@
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "3000:3000"
+    env_file: .env
+    # Inside compose, talk to db and mailpit by service name regardless of
+    # what .env says (which is set up for `pnpm dev` against localhost).
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-skat}:${POSTGRES_PASSWORD:-skat}@db:5432/${POSTGRES_DB:-skat}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    volumes:
+      - photos:/data/photos
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-skat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skat}
+      POSTGRES_DB: ${POSTGRES_DB:-skat}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  photos:
