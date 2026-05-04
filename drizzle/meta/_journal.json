@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1777938775554,
+      "tag": "0000_lean_sumo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777938797116,
+      "tag": "0001_player_stats_view",
+      "breakpoints": true
+    }
+  ]
+}

@@ -14,9 +14,9 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate",
+		"db:migrate": "node --env-file=.env scripts/migrate.js",
 		"db:studio": "drizzle-kit studio",
-		"seed": "tsx scripts/seed.ts"
+		"seed": "tsx --env-file=.env scripts/seed.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-node": "^5.2.13",

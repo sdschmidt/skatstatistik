@@ -30,4 +30,5 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/seed ./seed
 COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
 EXPOSE 3000
-CMD ["node", "build/index.js"]
+# Migrations apply on each start; drizzle-orm's migrator is idempotent.
+CMD ["sh", "-c", "node scripts/migrate.js && node build/index.js"]
