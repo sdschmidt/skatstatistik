@@ -27,6 +27,7 @@ data/
 
 # Local one-off import scratch space
 import_one_off/
+scripts/import-one-off.ts
 
 # Logs
 npm-debug.log*
