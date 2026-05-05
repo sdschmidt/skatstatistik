@@ -1,10 +1,11 @@
 <script lang="ts">
+	import Calendar from '$lib/components/Calendar.svelte';
 	import Chart from '$lib/components/Chart.svelte';
 	import { formatPercent } from '$lib/format';
 	import type { ApexOptions } from 'apexcharts';
 
 	let { data } = $props();
-	const { years, year, isAll, sort, dir, stats, totals } = $derived(data);
+	const { years, year, isAll, sort, dir, stats, totals, calendar } = $derived(data);
 
 	function buildUrl(overrides: { year?: number | 'all'; sort?: string; dir?: string }): string {
 		const merged = {
@@ -104,6 +105,12 @@
 		<span class="text-xs">(Summe der pro Spieler erfassten Runden)</span>.
 	</p>
 
+	{#if calendar.length > 0}
+		<section class="mt-4 rounded border border-gray-200 p-4 dark:border-gray-700">
+			<Calendar entries={calendar} />
+		</section>
+	{/if}
+
 	{#if stats.length === 0}
 		<p class="mt-4 text-sm text-gray-500">Keine Daten in {heading}.</p>
 	{:else}
@@ -143,8 +150,18 @@
 			<tbody>
 				{#each stats as s (s.player_id)}
 					<tr class="border-b border-gray-100 dark:border-gray-800">
-						<td class="py-1 font-mono">{s.kuerzel}</td>
-						<td>{s.name ?? ''}</td>
+						<td class="py-1">
+							<a class="font-mono underline" href="/spieler/{encodeURIComponent(s.kuerzel)}">
+								{s.kuerzel}
+							</a>
+						</td>
+						<td>
+							{#if s.name}
+								<a class="hover:underline" href="/spieler/{encodeURIComponent(s.kuerzel)}">
+									{s.name}
+								</a>
+							{/if}
+						</td>
 						<td class="tabular-nums">{s.spieltage}</td>
 						<td class="tabular-nums">{s.runden}</td>
 						<td class="tabular-nums">{s.bommel}</td>

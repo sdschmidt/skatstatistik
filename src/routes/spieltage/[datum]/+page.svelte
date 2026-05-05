@@ -59,8 +59,18 @@
 	<tbody>
 		{#each spieltag.ergebnisse as e (e.playerId)}
 			<tr class="border-b border-gray-100 dark:border-gray-800">
-				<td class="py-1 font-mono">{e.kuerzel}</td>
-				<td>{e.name ?? ''}</td>
+				<td class="py-1">
+					<a class="font-mono underline" href="/spieler/{encodeURIComponent(e.kuerzel)}">
+						{e.kuerzel}
+					</a>
+				</td>
+				<td>
+					{#if e.name}
+						<a class="hover:underline" href="/spieler/{encodeURIComponent(e.kuerzel)}">
+							{e.name}
+						</a>
+					{/if}
+				</td>
 				<td>{e.bommel}</td>
 				<td>{e.runden}</td>
 				<td>{formatPercent(e.runden ? e.bommel / e.runden : null)}</td>

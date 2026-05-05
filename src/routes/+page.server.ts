@@ -1,6 +1,7 @@
 import {
 	allTimeTotals,
 	availableYears,
+	spieltageWithTotals,
 	statsAllTime,
 	statsByYear,
 	yearTotals,
@@ -30,9 +31,13 @@ export const load: PageServerLoad = async ({ url }) => {
 	const sort: StatsSort = sortRaw && VALID_SORTS.has(sortRaw) ? sortRaw : 'spieltage';
 	const dir: 'asc' | 'desc' = url.searchParams.get('dir') === 'asc' ? 'asc' : 'desc';
 
-	const [stats, totals] = isAll
-		? await Promise.all([statsAllTime(sort, dir), allTimeTotals()])
-		: await Promise.all([statsByYear(year as number, sort, dir), yearTotals(year as number)]);
+	const [stats, totals, calendar] = isAll
+		? await Promise.all([statsAllTime(sort, dir), allTimeTotals(), spieltageWithTotals()])
+		: await Promise.all([
+				statsByYear(year as number, sort, dir),
+				yearTotals(year as number),
+				spieltageWithTotals(year as number)
+			]);
 
-	return { years, year, isAll, sort, dir, stats, totals };
+	return { years, year, isAll, sort, dir, stats, totals, calendar };
 };

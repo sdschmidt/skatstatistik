@@ -140,6 +140,12 @@
 	</div>
 </dl>
 
+<!-- calendar -->
+<section class="mt-6 rounded border border-gray-200 p-4 dark:border-gray-700">
+	<h2 class="mb-3 text-sm font-medium">Aktivität</h2>
+	<Calendar entries={calendar} from={filters.from} to={filters.to} />
+</section>
+
 <!-- filter -->
 <div class="mt-6 rounded border border-gray-200 p-4 text-sm dark:border-gray-700">
 	<div class="flex items-center justify-between">
@@ -197,12 +203,6 @@
 		</div>
 	</div>
 </div>
-
-<!-- calendar -->
-<section class="mt-6 rounded border border-gray-200 p-4 dark:border-gray-700">
-	<h2 class="mb-3 text-sm font-medium">Aktivität</h2>
-	<Calendar entries={calendar} from={filters.from} to={filters.to} />
-</section>
 
 <!-- ergebnisse table -->
 {#if ergebnisse.length === 0}

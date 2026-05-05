@@ -7,9 +7,18 @@
 	import { formatDate } from '$lib/format';
 
 	type Entry = { datum: string; runden: number | null };
-	type Props = { entries: Entry[]; from?: string; to?: string };
+	type Props = {
+		entries: Entry[];
+		from?: string;
+		to?: string;
+		// Optional explicit maximum to scale the color buckets against. Defaults
+		// to the largest `runden` in `entries` (or 1 if all are null/0).
+		maxValue?: number;
+		// When true (default), Spieltag cells are clickable links to the detail page.
+		linkSpieltage?: boolean;
+	};
 
-	let { entries, from, to }: Props = $props();
+	let { entries, from, to, maxValue, linkSpieltage = true }: Props = $props();
 
 	function parseIso(s: string): Date {
 		const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
@@ -67,6 +76,10 @@
 		return cells;
 	}
 
+	const calMax = $derived(
+		maxValue ?? Math.max(1, ...entries.map((e) => e.runden ?? 0))
+	);
+
 	function cellClass(c: Cell): string {
 		if (c.kind === 'empty') return '';
 		if (!c.isSpieltag) return 'bg-gray-100 dark:bg-gray-800';
@@ -76,9 +89,10 @@
 		}
 		const r = c.runden;
 		if (r <= 0) return 'bg-blue-50 dark:bg-blue-950';
-		if (r <= 2) return 'bg-blue-200 dark:bg-blue-900';
-		if (r <= 4) return 'bg-blue-400 dark:bg-blue-700';
-		if (r <= 6) return 'bg-blue-600 dark:bg-blue-500';
+		const t = r / calMax;
+		if (t <= 0.3) return 'bg-blue-200 dark:bg-blue-900';
+		if (t <= 0.6) return 'bg-blue-400 dark:bg-blue-700';
+		if (t <= 0.85) return 'bg-blue-600 dark:bg-blue-500';
 		return 'bg-blue-800 dark:bg-blue-300';
 	}
 
@@ -112,11 +126,14 @@
 					{#each cells as c, i (`${y}-${i}`)}
 						{#if c.kind === 'empty'}
 							<div></div>
-						{:else}
-							<div
-								class="size-[11px] rounded-sm {cellClass(c)}"
+						{:else if c.isSpieltag && linkSpieltage}
+							<a
+								href="/spieltage/{c.date}"
+								class="size-[11px] rounded-sm {cellClass(c)} hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 dark:hover:ring-offset-gray-900"
 								title={tooltip(c)}
-							></div>
+							></a>
+						{:else}
+							<div class="size-[11px] rounded-sm {cellClass(c)}" title={tooltip(c)}></div>
 						{/if}
 					{/each}
 				</div>

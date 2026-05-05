@@ -190,8 +190,18 @@
 							{formatDate(e.datum)}
 						</a>
 					</td>
-					<td class="font-mono">{e.kuerzel}</td>
-					<td>{e.name ?? ''}</td>
+					<td>
+						<a class="font-mono underline" href="/spieler/{encodeURIComponent(e.kuerzel)}">
+							{e.kuerzel}
+						</a>
+					</td>
+					<td>
+						{#if e.name}
+							<a class="hover:underline" href="/spieler/{encodeURIComponent(e.kuerzel)}">
+								{e.name}
+							</a>
+						{/if}
+					</td>
 					<td class="tabular-nums">{e.bommel}</td>
 					<td class="tabular-nums">{e.runden}</td>
 				</tr>

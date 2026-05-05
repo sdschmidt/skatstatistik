@@ -234,6 +234,21 @@ export async function playerCalendar(playerId: string, from?: string, to?: strin
 	);
 }
 
+// Used by the activity calendar on the Statistik page. Each row is one Spieltag
+// with the day's total runden — drives the colour scale.
+export async function spieltageWithTotals(year?: number) {
+	return db.execute<{ datum: string; runden: number }>(
+		sql`select s.datum::text as datum,
+		           coalesce(sum(e.runden), 0)::int as runden
+		    from spieltage s
+		    left join ergebnisse e on e.datum = s.datum
+		    where 1=1
+		      ${year !== undefined ? sql`and extract(year from s.datum)::int = ${year}` : sql``}
+		    group by s.datum
+		    order by s.datum`
+	);
+}
+
 export async function ergebnisseBounds() {
 	const rows = await db.execute<{
 		max_runden: number;
