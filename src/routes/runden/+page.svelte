@@ -136,13 +136,19 @@
 </div>
 
 <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-	<div class="group rounded border border-blue-300 p-3 transition hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950/60">
+	<a
+		href={spieltageHref}
+		class="group block rounded border border-blue-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950/60"
+	>
 		<dt class="flex items-center gap-1.5 text-xs text-blue-700 transition-colors group-hover:text-blue-800 dark:text-blue-300 dark:group-hover:text-blue-200">
 			<CalendarIcon class="size-3.5" /> Spieltage
 		</dt>
 		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.spieltage}</dd>
-	</div>
-	<div class="group rounded border border-teal-300 p-3 transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm dark:border-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/60">
+	</a>
+	<a
+		href="/player"
+		class="group block rounded border border-teal-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm dark:border-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/60"
+	>
 		<dt class="flex items-center gap-1.5 text-xs text-teal-700 transition-colors group-hover:text-teal-800 dark:text-teal-300 dark:group-hover:text-teal-200">
 			<Users class="size-3.5" /> Kürzel
 		</dt>
@@ -152,7 +158,7 @@
 				Ø {avgSpieler.toFixed(1)} / Spieltag
 			</dd>
 		{/if}
-	</div>
+	</a>
 	<div class="group rounded border border-amber-300 p-3 transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm dark:border-amber-800 dark:hover:border-amber-500 dark:hover:bg-amber-950/60">
 		<dt class="flex items-center gap-1.5 text-xs text-amber-700 transition-colors group-hover:text-amber-800 dark:text-amber-300 dark:group-hover:text-amber-200">
 			<Club class="size-3.5" /> Runden

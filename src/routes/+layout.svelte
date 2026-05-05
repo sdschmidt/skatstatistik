@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { afterNavigate, goto, invalidateAll, onNavigate } from '$app/navigation';
-	import { Menu, X } from 'lucide-svelte';
+	import { CircleUserRound, Menu, X } from 'lucide-svelte';
 	import logoStylized from '$lib/assets/logo_stylized@4x.png';
 	import cardHalf from '$lib/assets/card_half.png';
 	import { authClient } from '$lib/auth-client';
@@ -69,6 +69,10 @@
 
 				<div class="ml-auto flex items-center gap-2">
 					{#if data.user}
+						<CircleUserRound
+							class="size-5 text-green-600 dark:text-green-400"
+							aria-label="Angemeldet"
+						/>
 						<span class="hidden text-xs text-gray-500 lg:inline dark:text-gray-400">
 							{data.user.name || data.user.email}
 						</span>
@@ -98,8 +102,14 @@
 				</div>
 			</div>
 
-			<!-- Always-visible: theme toggle -->
+			<!-- Always-visible: theme toggle + login indicator (mobile) -->
 			<div class="ml-auto flex items-center gap-1 md:ml-0">
+				{#if data.user}
+					<CircleUserRound
+						class="size-5 text-green-600 md:hidden dark:text-green-400"
+						aria-label="Angemeldet"
+					/>
+				{/if}
 				<DarkToggle />
 				<!-- Burger (visible < md) -->
 				<button
@@ -154,8 +164,12 @@
 					<hr class="my-2 border-gray-200 dark:border-gray-800" />
 
 					{#if data.user}
-						<div class="px-2 pb-1 text-xs text-gray-500 dark:text-gray-400">
-							{data.user.name || data.user.email}
+						<div class="flex items-center gap-1.5 px-2 pb-1 text-xs text-gray-500 dark:text-gray-400">
+							<CircleUserRound
+								class="size-4 text-green-600 dark:text-green-400"
+								aria-label="Angemeldet"
+							/>
+							<span>{data.user.name || data.user.email}</span>
 							{#if data.user.role === 'pending'}<span class="ml-1 rounded bg-amber-100 px-1.5 text-[10px] text-amber-800 dark:bg-amber-900 dark:text-amber-200">inaktiv</span>{/if}
 						</div>
 						<button

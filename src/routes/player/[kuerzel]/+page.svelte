@@ -154,6 +154,19 @@
 		activeYear === 'all' ? 'Gesamt' : activeYear === null ? '' : `${activeYear}`
 	);
 
+	// Drill-down to /spieltage and /runden carrying just the active date range
+	// (year tab → that year; Gesamt → no filter). The list pages don't filter
+	// by player, so the link gives the player's spieltage in context, not in
+	// isolation.
+	const dateQs = $derived.by(() => {
+		const p = new URLSearchParams();
+		if (filters.from) p.set('from', filters.from);
+		if (filters.to) p.set('to', filters.to);
+		return p.size ? '?' + p.toString() : '';
+	});
+	const spieltageHref = $derived(`/spieltage${dateQs}`);
+	const rundenHref = $derived(`/runden${dateQs}`);
+
 	const isFiltered = $derived(
 		Boolean(
 			filters.from ||
@@ -216,7 +229,10 @@
 
 <!-- stats strip -->
 <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-	<div class="group rounded border border-blue-300 p-3 transition hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950/60">
+	<a
+		href={spieltageHref}
+		class="group block rounded border border-blue-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950/60"
+	>
 		<dt class="flex items-center gap-1.5 text-xs text-blue-700 transition-colors group-hover:text-blue-800 dark:text-blue-300 dark:group-hover:text-blue-200">
 			<CalendarIcon class="size-3.5" /> Spieltage
 		</dt>
@@ -226,8 +242,11 @@
 				<Trend prev={summaryTrend.spieltage} curr={summary.spieltage} format="count" />
 			{/if}
 		</dd>
-	</div>
-	<div class="group rounded border border-amber-300 p-3 transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm dark:border-amber-800 dark:hover:border-amber-500 dark:hover:bg-amber-950/60">
+	</a>
+	<a
+		href={rundenHref}
+		class="group block rounded border border-amber-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm dark:border-amber-800 dark:hover:border-amber-500 dark:hover:bg-amber-950/60"
+	>
 		<dt class="flex items-center gap-1.5 text-xs text-amber-700 transition-colors group-hover:text-amber-800 dark:text-amber-300 dark:group-hover:text-amber-200">
 			<Club class="size-3.5" /> Runden
 		</dt>
@@ -237,7 +256,7 @@
 				<Trend prev={summaryTrend.runden} curr={summary.runden} format="count" />
 			{/if}
 		</dd>
-	</div>
+	</a>
 	<div class="group rounded border border-orange-300 p-3 transition hover:-translate-y-0.5 hover:border-orange-400 hover:bg-orange-50 hover:shadow-sm dark:border-orange-800 dark:hover:border-orange-500 dark:hover:bg-orange-950/60">
 		<dt class="flex items-center gap-1.5 text-xs text-orange-700 transition-colors group-hover:text-orange-800 dark:text-orange-300 dark:group-hover:text-orange-200">
 			<Ellipse class="size-3.5" /> Bommel
