@@ -129,7 +129,7 @@
 						{:else if c.isSpieltag && linkSpieltage}
 							<a
 								href="/spieltage/{c.date}"
-								class="size-[11px] rounded-sm {cellClass(c)} hover:ring-2 hover:ring-blue-500 hover:ring-offset-1 dark:hover:ring-offset-gray-900"
+								class="size-[11px] rounded-sm {cellClass(c)} transition hover:brightness-125 hover:outline hover:outline-1 hover:outline-gray-900 dark:hover:outline-gray-100"
 								title={tooltip(c)}
 							></a>
 						{:else}
