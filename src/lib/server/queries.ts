@@ -1,20 +1,66 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from './db';
 import { ergebnisse, players, spieltage } from './schema';
 
-export async function listSpieltage() {
+export type SpieltageSort = 'date' | 'players' | 'runden';
+export type SpieltageDir = 'asc' | 'desc';
+
+export type SpieltageFilters = {
+	from?: string;
+	to?: string;
+	minPlayers?: number;
+	maxPlayers?: number;
+	minRunden?: number;
+	maxRunden?: number;
+	sort?: SpieltageSort;
+	dir?: SpieltageDir;
+};
+
+export async function listSpieltage(f: SpieltageFilters = {}) {
+	const playerCountExpr = sql<number>`count(distinct ${ergebnisse.playerId})::int`;
+	const rundenExpr = sql<number>`coalesce(sum(${ergebnisse.runden}), 0)::int`;
+
+	const where = and(
+		f.from ? gte(spieltage.datum, f.from) : undefined,
+		f.to ? lte(spieltage.datum, f.to) : undefined
+	);
+	const having = and(
+		f.minPlayers !== undefined
+			? sql`count(distinct ${ergebnisse.playerId}) >= ${f.minPlayers}`
+			: undefined,
+		f.maxPlayers !== undefined
+			? sql`count(distinct ${ergebnisse.playerId}) <= ${f.maxPlayers}`
+			: undefined,
+		f.minRunden !== undefined
+			? sql`coalesce(sum(${ergebnisse.runden}), 0) >= ${f.minRunden}`
+			: undefined,
+		f.maxRunden !== undefined
+			? sql`coalesce(sum(${ergebnisse.runden}), 0) <= ${f.maxRunden}`
+			: undefined
+	);
+
+	const dirFn = f.dir === 'asc' ? asc : desc;
+	const orderBy: SQL[] =
+		f.sort === 'players'
+			? [dirFn(playerCountExpr), desc(spieltage.datum)]
+			: f.sort === 'runden'
+				? [dirFn(rundenExpr), desc(spieltage.datum)]
+				: [dirFn(spieltage.datum)];
+
 	return db
 		.select({
 			datum: spieltage.datum,
 			photoPath: spieltage.photoPath,
 			notes: spieltage.notes,
-			playerCount: sql<number>`count(distinct ${ergebnisse.playerId})::int`,
-			runden: sql<number>`coalesce(sum(${ergebnisse.runden}), 0)::int`
+			playerCount: playerCountExpr,
+			runden: rundenExpr
 		})
 		.from(spieltage)
 		.leftJoin(ergebnisse, eq(ergebnisse.datum, spieltage.datum))
+		.where(where)
 		.groupBy(spieltage.datum, spieltage.photoPath, spieltage.notes)
-		.orderBy(desc(spieltage.datum));
+		.having(having)
+		.orderBy(...orderBy);
 }
 
 export async function getSpieltag(datum: string) {
