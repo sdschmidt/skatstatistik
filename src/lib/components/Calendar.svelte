@@ -1,8 +1,10 @@
 <script lang="ts">
 	// GitHub-activity-style yearly grid. One column per ISO week, 7 rows
-	// (Mon-Sun). Each cell is one day. Color scales with `runden` played
-	// that day; days where there was a Spieltag but the player didn't show
-	// up get a faint outline; idle days are blank.
+	// (Mon–Sun). Each year is always rendered Jan 1 → Dec 31 regardless of
+	// the data range — months without entries just appear as idle cells.
+	//
+	// Colour scales with `runden` for that day; days with a Spieltag the
+	// player didn't play get a faint ring; idle days are blank.
 
 	import { formatDate } from '$lib/format';
 
@@ -11,14 +13,29 @@
 		entries: Entry[];
 		from?: string;
 		to?: string;
-		// Optional explicit maximum to scale the color buckets against. Defaults
-		// to the largest `runden` in `entries` (or 1 if all are null/0).
+		// Optional explicit maximum for colour scaling. Defaults to the largest
+		// `runden` in `entries` (or 1 if all are null/0).
 		maxValue?: number;
-		// When true (default), Spieltag cells are clickable links to the detail page.
+		// Make Spieltag cells <a href="/spieltage/[datum]">. On by default.
 		linkSpieltage?: boolean;
 	};
 
 	let { entries, from, to, maxValue, linkSpieltage = true }: Props = $props();
+
+	const MONTH_NAMES = [
+		'Jan',
+		'Feb',
+		'Mär',
+		'Apr',
+		'Mai',
+		'Jun',
+		'Jul',
+		'Aug',
+		'Sep',
+		'Okt',
+		'Nov',
+		'Dez'
+	];
 
 	function parseIso(s: string): Date {
 		const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
@@ -34,20 +51,17 @@
 
 	const byDate = $derived(new Map(entries.map((e) => [e.datum, e.runden])));
 
-	const range = $derived.by(() => {
+	// Years to render — derived from `from`/`to` if given, otherwise from the
+	// entries themselves.
+	const years = $derived.by(() => {
 		const dates = entries.map((e) => e.datum).sort();
 		const startIso = from ?? dates[0];
 		const endIso = to ?? dates[dates.length - 1];
-		if (!startIso || !endIso) {
-			const now = new Date();
-			return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) };
-		}
-		return { start: parseIso(startIso), end: parseIso(endIso) };
-	});
-
-	const years = $derived.by(() => {
+		if (!startIso || !endIso) return [new Date().getFullYear()];
+		const startY = parseIso(startIso).getFullYear();
+		const endY = parseIso(endIso).getFullYear();
 		const out: number[] = [];
-		for (let y = range.start.getFullYear(); y <= range.end.getFullYear(); y++) out.push(y);
+		for (let y = startY; y <= endY; y++) out.push(y);
 		return out;
 	});
 
@@ -55,11 +69,10 @@
 		| { kind: 'empty' }
 		| { kind: 'day'; date: string; runden: number | null; isSpieltag: boolean };
 
-	function yearCells(year: number): Cell[] {
-		const rangeStart = range.start;
-		const rangeEnd = range.end;
-		const start = year === rangeStart.getFullYear() ? rangeStart : new Date(year, 0, 1);
-		const end = year === rangeEnd.getFullYear() ? rangeEnd : new Date(year, 11, 31);
+	function yearCells(year: number): { cells: Cell[]; cols: number } {
+		// Always Jan 1 → Dec 31.
+		const start = new Date(year, 0, 1);
+		const end = new Date(year, 11, 31);
 		const cells: Cell[] = [];
 		const startWeekday = (start.getDay() + 6) % 7; // Mon=0
 		for (let i = 0; i < startWeekday; i++) cells.push({ kind: 'empty' });
@@ -73,7 +86,20 @@
 		}
 		const endWeekday = (end.getDay() + 6) % 7;
 		for (let i = endWeekday + 1; i < 7; i++) cells.push({ kind: 'empty' });
-		return cells;
+		return { cells, cols: cells.length / 7 };
+	}
+
+	function monthLabels(year: number): { month: string; col: number }[] {
+		const yearStart = new Date(year, 0, 1);
+		const startWeekday = (yearStart.getDay() + 6) % 7;
+		const out: { month: string; col: number }[] = [];
+		for (let m = 0; m < 12; m++) {
+			const first = new Date(year, m, 1);
+			const days = Math.floor((first.getTime() - yearStart.getTime()) / 86400000);
+			const col = Math.floor((days + startWeekday) / 7);
+			out.push({ month: MONTH_NAMES[m], col });
+		}
+		return out;
 	}
 
 	const calMax = $derived(
@@ -84,7 +110,6 @@
 		if (c.kind === 'empty') return '';
 		if (!c.isSpieltag) return 'bg-gray-100 dark:bg-gray-800';
 		if (c.runden === null) {
-			// Spieltag happened but player didn't play
 			return 'bg-gray-200 ring-1 ring-gray-300 dark:bg-gray-700 dark:ring-gray-600';
 		}
 		const r = c.runden;
@@ -104,26 +129,48 @@
 	}
 </script>
 
-<div class="space-y-3">
+<div class="space-y-4">
 	{#each years as y (y)}
-		{@const cells = yearCells(y)}
+		{@const yc = yearCells(y)}
+		{@const months = monthLabels(y)}
 		<div>
 			<div class="mb-1 text-xs text-gray-500 dark:text-gray-400">{y}</div>
-			<div class="flex gap-1">
+			<div
+				class="inline-grid gap-x-1 gap-y-[2px]"
+				style="grid-template-columns: max-content auto;"
+			>
+				<!-- top-left corner -->
+				<div></div>
+				<!-- month labels row, 11px columns matching the cells below -->
+				<div
+					class="grid gap-[2px]"
+					style="grid-template-columns: repeat({yc.cols}, 11px);"
+				>
+					{#each months as ml (ml.month)}
+						<span
+							style="grid-column: {ml.col + 1};"
+							class="text-[9px] whitespace-nowrap text-gray-400 dark:text-gray-500"
+						>
+							{ml.month}
+						</span>
+					{/each}
+				</div>
+				<!-- weekday labels (Mo at row 1, Mi row 3, Fr row 5) -->
 				<div class="grid grid-rows-7 gap-[2px] pr-1 text-[9px] text-gray-400 dark:text-gray-500">
-					<span></span>
 					<span>Mo</span>
 					<span></span>
 					<span>Mi</span>
 					<span></span>
 					<span>Fr</span>
 					<span></span>
+					<span></span>
 				</div>
+				<!-- cells -->
 				<div
-					class="grid grid-flow-col grid-rows-7 gap-[2px] overflow-x-auto"
-					style="grid-auto-columns: 11px;"
+					class="grid grid-flow-col grid-rows-7 gap-[2px] overflow-x-auto p-[5px]"
+					style="grid-template-columns: repeat({yc.cols}, 11px);"
 				>
-					{#each cells as c, i (`${y}-${i}`)}
+					{#each yc.cells as c, i (`${y}-${i}`)}
 						{#if c.kind === 'empty'}
 							<div></div>
 						{:else if c.isSpieltag && linkSpieltage}
