@@ -10,8 +10,11 @@ services:
     # what .env says (which is set up for `pnpm dev` against localhost).
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-skat}:${POSTGRES_PASSWORD:-skat}@db:5432/${POSTGRES_DB:-skat}
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
+      # SMTP defaults to the bundled Mailpit if .env doesn't set them. Set
+      # SMTP_HOST / SMTP_PORT in .env to point at a real relay (Proton,
+      # Resend, …) for prod.
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       # adapter-node uses ORIGIN to construct the request URL when behind any
       # proxy or non-default networking (the docker port mapping qualifies).
