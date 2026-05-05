@@ -37,7 +37,7 @@
 </script>
 
 <div class="flex items-center justify-between">
-	<h1 class="text-2xl font-semibold">Benutzer verwalten</h1>
+	<h1 class="text-2xl font-semibold">Verwaltung</h1>
 	<span class="text-xs text-gray-500">{data.users.length}</span>
 </div>
 

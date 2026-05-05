@@ -55,11 +55,16 @@
 
 			<!-- Desktop links (hidden < md) -->
 			<div class="hidden flex-1 items-center gap-6 md:flex">
+				{#if data.latestSpieltag}
+					<a href="/spieltage/{data.latestSpieltag}" class="hover:underline">
+						Letzter Spieltag
+					</a>
+				{/if}
 				<a href="/spieltage" class="hover:underline">Spieltage</a>
 				<a href="/runden" class="hover:underline">Runden</a>
-				<a href="/spieler" class="hover:underline">Spieler</a>
+				<a href="/player" class="hover:underline">Kürzel</a>
 				{#if data.user?.role === 'admin'}
-					<a href="/admin/users" class="hover:underline">Benutzer</a>
+					<a href="/admin/users" class="hover:underline">Verwaltung</a>
 				{/if}
 
 				<div class="ml-auto flex items-center gap-2">
@@ -117,6 +122,14 @@
 		{#if mobileOpen}
 			<div class="border-t border-gray-200 bg-white px-4 py-3 md:hidden dark:border-gray-800 dark:bg-gray-900">
 				<div class="flex flex-col gap-1 text-sm">
+					{#if data.latestSpieltag}
+						<a
+							href="/spieltage/{data.latestSpieltag}"
+							class="rounded px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+						>
+							Letzter Spieltag
+						</a>
+					{/if}
 					<a
 						href="/spieltage"
 						class="rounded px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -126,15 +139,15 @@
 					<a href="/runden" class="rounded px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800">
 						Runden
 					</a>
-					<a href="/spieler" class="rounded px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800">
-						Spieler
+					<a href="/player" class="rounded px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800">
+						Kürzel
 					</a>
 					{#if data.user?.role === 'admin'}
 						<a
 							href="/admin/users"
 							class="rounded px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
 						>
-							Benutzer
+							Verwaltung
 						</a>
 					{/if}
 

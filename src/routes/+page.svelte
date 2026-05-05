@@ -1,11 +1,17 @@
 <script lang="ts">
-	import { Calendar as CalendarIcon, Club } from 'lucide-svelte';
+	import {
+		Calendar as CalendarIcon,
+		CalendarClock,
+		Club,
+		Ellipse,
+		Users
+	} from 'lucide-svelte';
 	import Trend from '$lib/components/Trend.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Calendar from '$lib/components/Calendar.svelte';
 	import Chart from '$lib/components/Chart.svelte';
 	import Sparkline from '$lib/components/Sparkline.svelte';
-	import { formatPercent } from '$lib/format';
+	import { formatDate, formatPercent } from '$lib/format';
 	import { paletteFor } from '$lib/playerColor';
 	import { rowGoto } from '$lib/rowLink';
 	import { theme } from '$lib/theme.svelte';
@@ -37,6 +43,8 @@
 		if (sort !== field) return '';
 		return dir === 'asc' ? ' ↑' : ' ↓';
 	}
+
+	const drillQs = $derived(isAll ? '' : `?from=${year}-01-01&to=${year}-12-31`);
 
 	const chartLabels = $derived(stats.map((s) => s.kuerzel));
 	const chartColors = $derived(stats.map((s) => paletteFor(s.kuerzel)));
@@ -107,20 +115,71 @@
 		{/each}
 	</nav>
 
-	<p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
-		<span class="inline-flex items-center gap-1.5">
-			<CalendarIcon class="size-4" />
-			<strong>{totals.spieltage}</strong>
-			{totals.spieltage === 1 ? 'Spieltag' : 'Spieltage'}
-		</span>
-		<span class="inline-flex items-center gap-1.5">
-			<Club class="size-4" />
-			<strong>{totals.runden}</strong> Spieler-Runden
-		</span>
-		<span class="text-xs">
-			{isAll ? 'gesamt' : `im Jahr ${year}`} (Summe der pro Spieler erfassten Runden)
-		</span>
-	</p>
+	{@const avgSpieler = totals.spieltage ? totals.ergebnisse / totals.spieltage : null}
+	{@const avgRunden = totals.spieltage ? totals.runden / totals.spieltage : null}
+	<dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+		{#if totals.letzter}
+			<a
+				href="/spieltage/{totals.letzter}"
+				class="group block rounded border border-rose-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-rose-400 hover:bg-rose-50 hover:shadow-sm dark:border-rose-800 dark:hover:border-rose-500 dark:hover:bg-rose-950/60"
+			>
+				<dt class="flex items-center gap-1.5 text-xs text-rose-700 transition-colors group-hover:text-rose-800 dark:text-rose-300 dark:group-hover:text-rose-200">
+					<CalendarClock class="size-3.5" /> Letzter Spieltag
+				</dt>
+				<dd class="mt-1 text-lg font-semibold tabular-nums">{formatDate(totals.letzter)}</dd>
+			</a>
+		{:else}
+			<div class="rounded border border-rose-300 p-3 dark:border-rose-800">
+				<dt class="flex items-center gap-1.5 text-xs text-rose-700 dark:text-rose-300">
+					<CalendarClock class="size-3.5" /> Letzter Spieltag
+				</dt>
+				<dd class="mt-1 text-lg font-semibold text-gray-400 tabular-nums">—</dd>
+			</div>
+		{/if}
+		<a
+			href="/spieltage{drillQs}"
+			class="group block rounded border border-blue-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950/60"
+		>
+			<dt class="flex items-center gap-1.5 text-xs text-blue-700 transition-colors group-hover:text-blue-800 dark:text-blue-300 dark:group-hover:text-blue-200">
+				<CalendarIcon class="size-3.5" /> Spieltage
+			</dt>
+			<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.spieltage}</dd>
+		</a>
+		<a
+			href="/player"
+			class="group block rounded border border-teal-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm dark:border-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/60"
+		>
+			<dt class="flex items-center gap-1.5 text-xs text-teal-700 transition-colors group-hover:text-teal-800 dark:text-teal-300 dark:group-hover:text-teal-200">
+				<Users class="size-3.5" /> Kürzel
+			</dt>
+			<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.spieler}</dd>
+			{#if avgSpieler !== null}
+				<dd class="text-[10px] text-gray-500 dark:text-gray-400">
+					Ø {avgSpieler.toFixed(1)} / Spieltag
+				</dd>
+			{/if}
+		</a>
+		<a
+			href="/runden{drillQs}"
+			class="group block rounded border border-amber-300 p-3 no-underline transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm dark:border-amber-800 dark:hover:border-amber-500 dark:hover:bg-amber-950/60"
+		>
+			<dt class="flex items-center gap-1.5 text-xs text-amber-700 transition-colors group-hover:text-amber-800 dark:text-amber-300 dark:group-hover:text-amber-200">
+				<Club class="size-3.5" /> Runden
+			</dt>
+			<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.runden}</dd>
+			{#if avgRunden !== null}
+				<dd class="text-[10px] text-gray-500 dark:text-gray-400">
+					Ø {avgRunden.toFixed(1)} / Spieltag
+				</dd>
+			{/if}
+		</a>
+		<div class="group rounded border border-orange-300 p-3 transition hover:-translate-y-0.5 hover:border-orange-400 hover:bg-orange-50 hover:shadow-sm dark:border-orange-800 dark:hover:border-orange-500 dark:hover:bg-orange-950/60">
+			<dt class="flex items-center gap-1.5 text-xs text-orange-700 transition-colors group-hover:text-orange-800 dark:text-orange-300 dark:group-hover:text-orange-200">
+				<Ellipse class="size-3.5" /> Bommel
+			</dt>
+			<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.bommel}</dd>
+		</div>
+	</dl>
 
 	{#if calendar.length > 0}
 		<section class="mt-4">
@@ -176,12 +235,12 @@
 						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 						<tr
 							class="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
-							onclick={rowGoto(`/spieler/${encodeURIComponent(s.kuerzel)}`)}
+							onclick={rowGoto(`/player/${encodeURIComponent(s.kuerzel)}`)}
 						>
 							<td class="py-1 pr-4">
 								<a
 									class="inline-flex items-center gap-2 no-underline"
-									href="/spieler/{encodeURIComponent(s.kuerzel)}"
+									href="/player/{encodeURIComponent(s.kuerzel)}"
 								>
 									<Avatar kuerzel={s.kuerzel} size={22} />
 								</a>

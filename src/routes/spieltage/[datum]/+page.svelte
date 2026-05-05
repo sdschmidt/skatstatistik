@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { Club, Ellipse, Users } from 'lucide-svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { formatDate, formatLongDate, formatPercent } from '$lib/format';
 	import { rowGoto } from '$lib/rowLink';
 	let { data } = $props();
 	const spieltag = $derived(data.spieltag);
+	const spielerCount = $derived(spieltag.ergebnisse.length);
 	const totalRunden = $derived(spieltag.ergebnisse.reduce((s, e) => s + e.runden, 0));
 	const totalBommel = $derived(spieltag.ergebnisse.reduce((s, e) => s + e.bommel, 0));
+	const seasonAvg = $derived(data.seasonAvgSpieler);
+	const spielerDelta = $derived(seasonAvg === null ? null : spielerCount - seasonAvg);
 	const isAdmin = $derived(page.data.user?.role === 'admin');
 	const canWrite = $derived(page.data.user && page.data.user.role !== 'pending');
 </script>
@@ -66,6 +70,32 @@
 	{/if}
 </nav>
 
+<dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+	<div class="group rounded border border-teal-300 p-3 transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm dark:border-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-teal-700 transition-colors group-hover:text-teal-800 dark:text-teal-300 dark:group-hover:text-teal-200">
+			<Users class="size-3.5" /> Spieler
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{spielerCount}</dd>
+		{#if spielerDelta !== null && seasonAvg !== null}
+			<dd class="text-[10px] text-gray-500 dark:text-gray-400">
+				{spielerDelta > 0 ? '+' : ''}{spielerDelta.toFixed(1).replace(/\.0$/, '')} vs Ø {seasonAvg.toFixed(1)}
+			</dd>
+		{/if}
+	</div>
+	<div class="group rounded border border-amber-300 p-3 transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm dark:border-amber-800 dark:hover:border-amber-500 dark:hover:bg-amber-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-amber-700 transition-colors group-hover:text-amber-800 dark:text-amber-300 dark:group-hover:text-amber-200">
+			<Club class="size-3.5" /> Runden
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totalRunden}</dd>
+	</div>
+	<div class="group rounded border border-orange-300 p-3 transition hover:-translate-y-0.5 hover:border-orange-400 hover:bg-orange-50 hover:shadow-sm dark:border-orange-800 dark:hover:border-orange-500 dark:hover:bg-orange-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-orange-700 transition-colors group-hover:text-orange-800 dark:text-orange-300 dark:group-hover:text-orange-200">
+			<Ellipse class="size-3.5" /> Bommel
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totalBommel}</dd>
+	</div>
+</dl>
+
 {#if spieltag.photoPath}
 	<a href="/api/photos/{spieltag.datum}" target="_blank" rel="noopener" class="mt-4 inline-block">
 		<img
@@ -96,12 +126,12 @@
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<tr
 				class="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
-				onclick={rowGoto(`/spieler/${encodeURIComponent(e.kuerzel)}`)}
+				onclick={rowGoto(`/player/${encodeURIComponent(e.kuerzel)}`)}
 			>
 				<td class="py-1">
 					<a
 						class="inline-flex items-center gap-2 no-underline"
-						href="/spieler/{encodeURIComponent(e.kuerzel)}"
+						href="/player/{encodeURIComponent(e.kuerzel)}"
 					>
 						<Avatar kuerzel={e.kuerzel} size={22} />
 					</a>

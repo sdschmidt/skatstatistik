@@ -29,7 +29,7 @@
 	const calendar = $derived(data.calendar);
 	const ergebnisse = $derived(data.ergebnisse);
 
-	const baseUrl = $derived(`/spieler/${encodeURIComponent(player.kuerzel)}`);
+	const baseUrl = $derived(`/player/${encodeURIComponent(player.kuerzel)}`);
 
 	function pushUrl(params: Record<string, string | number | undefined>) {
 		const merged: Record<string, string | number | undefined> = {
@@ -308,7 +308,6 @@
 
 <!-- calendar -->
 <section class="mt-6">
-	<h2 class="mb-3 text-sm font-medium">Aktivität</h2>
 	<Calendar entries={calendar} from={data.calRange.from} to={data.calRange.to} />
 </section>
 

@@ -110,7 +110,7 @@
 		if (c.kind === 'empty') return '';
 		if (!c.isSpieltag) return 'bg-gray-100 dark:bg-gray-800';
 		if (c.runden === null) {
-			return 'bg-gray-200 ring-1 ring-gray-300 dark:bg-gray-700 dark:ring-gray-600';
+			return 'bg-yellow-100 ring-1 ring-yellow-300 dark:bg-yellow-900 dark:ring-yellow-800';
 		}
 		const r = c.runden;
 		if (r <= 0) return 'bg-blue-50 dark:bg-blue-950';
@@ -198,7 +198,7 @@
 			<span>mehr Runden</span>
 		</span>
 		<span class="inline-flex items-center gap-1">
-			<span class="size-[11px] rounded-sm bg-gray-200 ring-1 ring-gray-300 dark:bg-gray-700 dark:ring-gray-600"></span>
+			<span class="size-[11px] rounded-sm bg-yellow-100 ring-1 ring-yellow-300 dark:bg-yellow-900 dark:ring-yellow-800"></span>
 			Spieltag, nicht gespielt
 		</span>
 	</div>

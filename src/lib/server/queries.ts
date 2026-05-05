@@ -75,6 +75,48 @@ export async function listSpieltage(f: SpieltageFilters = {}) {
 		.orderBy(...orderBy);
 }
 
+// Distinct players who appear in ergebnisse on the spieltage matching the
+// given filter. Used for the Kürzel stat card on /spieltage; not derivable
+// client-side because listSpieltage's rows only carry per-day playerCount.
+export async function distinctPlayersForSpieltageFilter(
+	f: SpieltageFilters = {}
+): Promise<number> {
+	const wheres: SQL[] = [];
+	if (f.from) wheres.push(sql`s.datum >= ${f.from}`);
+	if (f.to) wheres.push(sql`s.datum <= ${f.to}`);
+
+	const havings: SQL[] = [];
+	if (f.minPlayers !== undefined)
+		havings.push(sql`count(distinct e.player_id) >= ${f.minPlayers}`);
+	if (f.maxPlayers !== undefined)
+		havings.push(sql`count(distinct e.player_id) <= ${f.maxPlayers}`);
+	if (f.minRunden !== undefined)
+		havings.push(sql`coalesce(sum(e.runden), 0) >= ${f.minRunden}`);
+	if (f.maxRunden !== undefined)
+		havings.push(sql`coalesce(sum(e.runden), 0) <= ${f.maxRunden}`);
+	if (f.minBommel !== undefined)
+		havings.push(sql`coalesce(sum(e.bommel), 0) >= ${f.minBommel}`);
+	if (f.maxBommel !== undefined)
+		havings.push(sql`coalesce(sum(e.bommel), 0) <= ${f.maxBommel}`);
+
+	const whereSql = wheres.length ? sql`where ${sql.join(wheres, sql` and `)}` : sql``;
+	const havingSql = havings.length ? sql`having ${sql.join(havings, sql` and `)}` : sql``;
+
+	const rows = await db.execute<{ c: number }>(
+		sql`select count(distinct e2.player_id)::int as c
+		    from ergebnisse e2
+		    where e2.datum in (
+		      select s.datum
+		      from spieltage s
+		      left join ergebnisse e on e.datum = s.datum
+		      ${whereSql}
+		      group by s.datum
+		      ${havingSql}
+		    )`
+	);
+	return rows[0]?.c ?? 0;
+}
+
 export async function spieltageBounds() {
 	const rows = await db.execute<{
 		max_players: number;
@@ -154,7 +196,7 @@ export async function listErgebnisse(f: ErgebnisseFilters = {}) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Per-player page (/spieler/[kuerzel])
+// Per-player page (/player/[kuerzel])
 // ──────────────────────────────────────────────────────────────────────
 
 export async function getPlayerByKuerzel(kuerzel: string) {
@@ -289,7 +331,7 @@ export async function playerCalendar(playerId: string, from?: string, to?: strin
 //
 // Drives:
 //   • the inline Sparkline on the Statistik table (values only),
-//   • the line chart on /spieler/[kuerzel] (datum + value).
+//   • the line chart on /player/[kuerzel] (datum + value).
 export async function rollingBpr(
 	windowRounds = 30
 ): Promise<Map<string, { datum: string; bpr: number }[]>> {
@@ -724,6 +766,29 @@ export async function maxDatumInYear(year: number): Promise<string | null> {
 	return rows[0]?.d ?? null;
 }
 
+export async function latestSpieltag(): Promise<string | null> {
+	const rows = await db.execute<{ d: string | null }>(
+		sql`select max(datum)::text as d from spieltage`
+	);
+	return rows[0]?.d ?? null;
+}
+
+// Average players per spieltag across the year of `datum`. Used on the
+// spieltag detail page to show "+1 vs Ø 4.2"-style deltas against the season.
+export async function avgSpielerPerSpieltagInYear(year: number): Promise<number | null> {
+	const rows = await db.execute<{ avg: string | null }>(
+		sql`select avg(c)::text as avg
+		    from (
+		      select count(*)::int as c
+		      from ergebnisse
+		      where extract(year from datum)::int = ${year}
+		      group by datum
+		    ) t`
+	);
+	const v = rows[0]?.avg;
+	return v === null || v === undefined ? null : Number(v);
+}
+
 export async function statsAllTime(
 	sort: StatsSort = 'spieltage',
 	dir: 'asc' | 'desc' = 'desc'
@@ -736,25 +801,56 @@ export async function statsAllTime(
 	);
 }
 
-export async function allTimeTotals() {
-	const rows = await db.execute<{ spieltage: number; runden: number }>(
-		sql`select count(distinct s.datum)::int as spieltage,
-		           coalesce(sum(e.runden), 0)::int as runden
+type TotalsRow = {
+	spieltage: number;
+	runden: number;
+	bommel: number;
+	letzter: string | null;
+	// Number of (player, datum) rows in ergebnisse — divided by spieltage gives
+	// avg players per spieltag.
+	ergebnisse: number;
+	// Distinct players who recorded an ergebnis in the period.
+	spieler: number;
+};
+
+const EMPTY_TOTALS: TotalsRow = {
+	spieltage: 0,
+	runden: 0,
+	bommel: 0,
+	letzter: null,
+	ergebnisse: 0,
+	spieler: 0
+};
+
+export async function allTimeTotals(): Promise<TotalsRow> {
+	const rows = await db.execute<TotalsRow>(
+		sql`select
+		      count(distinct s.datum)::int                  as spieltage,
+		      coalesce(sum(e.runden), 0)::int               as runden,
+		      coalesce(sum(e.bommel), 0)::int               as bommel,
+		      max(s.datum)::text                            as letzter,
+		      count(e.*)::int                               as ergebnisse,
+		      count(distinct e.player_id)::int              as spieler
 		    from spieltage s
 		    left join ergebnisse e on e.datum = s.datum`
 	);
-	return rows[0] ?? { spieltage: 0, runden: 0 };
+	return rows[0] ?? EMPTY_TOTALS;
 }
 
-export async function yearTotals(year: number) {
-	const rows = await db.execute<{ spieltage: number; runden: number }>(
-		sql`select count(distinct s.datum)::int as spieltage,
-		           coalesce(sum(e.runden), 0)::int as runden
+export async function yearTotals(year: number): Promise<TotalsRow> {
+	const rows = await db.execute<TotalsRow>(
+		sql`select
+		      count(distinct s.datum)::int                  as spieltage,
+		      coalesce(sum(e.runden), 0)::int               as runden,
+		      coalesce(sum(e.bommel), 0)::int               as bommel,
+		      max(s.datum)::text                            as letzter,
+		      count(e.*)::int                               as ergebnisse,
+		      count(distinct e.player_id)::int              as spieler
 		    from spieltage s
 		    left join ergebnisse e on e.datum = s.datum
 		    where extract(year from s.datum)::int = ${year}`
 	);
-	return rows[0] ?? { spieltage: 0, runden: 0 };
+	return rows[0] ?? EMPTY_TOTALS;
 }
 
 export async function availableYears(): Promise<number[]> {

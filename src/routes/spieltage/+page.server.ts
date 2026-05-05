@@ -1,4 +1,9 @@
-import { listSpieltage, spieltageBounds, type SpieltageFilters } from '$server/queries';
+import {
+	distinctPlayersForSpieltageFilter,
+	listSpieltage,
+	spieltageBounds,
+	type SpieltageFilters
+} from '$server/queries';
 import type { PageServerLoad } from './$types';
 
 function intParam(v: string | null): number | undefined {
@@ -30,6 +35,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		dir
 	};
 
-	const [rows, bounds] = await Promise.all([listSpieltage(filters), spieltageBounds()]);
-	return { spieltage: rows, filters, bounds };
+	const [rows, bounds, kuerzelCount] = await Promise.all([
+		listSpieltage(filters),
+		spieltageBounds(),
+		distinctPlayersForSpieltageFilter(filters)
+	]);
+	return { spieltage: rows, filters, bounds, kuerzelCount };
 };

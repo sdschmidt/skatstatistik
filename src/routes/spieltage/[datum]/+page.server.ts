@@ -1,15 +1,22 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { adjacentSpieltage, deleteSpieltag, getSpieltag } from '$server/queries';
+import {
+	adjacentSpieltage,
+	avgSpielerPerSpieltagInYear,
+	deleteSpieltag,
+	getSpieltag
+} from '$server/queries';
 import { deletePhoto } from '$server/photos';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const [spieltag, adjacent] = await Promise.all([
+	const year = Number(params.datum.slice(0, 4));
+	const [spieltag, adjacent, seasonAvgSpieler] = await Promise.all([
 		getSpieltag(params.datum),
-		adjacentSpieltage(params.datum)
+		adjacentSpieltage(params.datum),
+		avgSpielerPerSpieltagInYear(year)
 	]);
 	if (!spieltag) error(404, 'Spieltag nicht gefunden');
-	return { spieltag, adjacent };
+	return { spieltag, adjacent, seasonAvgSpieler };
 };
 
 export const actions: Actions = {

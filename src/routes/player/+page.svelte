@@ -23,8 +23,8 @@
 </script>
 
 <div class="flex items-center justify-between">
-	<h1 class="text-2xl font-semibold">Spieler</h1>
-	<span class="text-xs text-gray-500">{data.players.length} Spieler</span>
+	<h1 class="text-2xl font-semibold">Kürzel</h1>
+	<span class="text-xs text-gray-500">{data.players.length} Kürzel</span>
 </div>
 
 {#if canWrite}
@@ -64,7 +64,7 @@
 
 <div class="mt-6 grid grid-cols-[max-content_1fr_max-content] items-center gap-x-3 text-sm">
 	<div class="contents text-xs font-medium text-gray-500">
-		<span class="border-b border-gray-200 py-2 dark:border-gray-700">Spieler</span>
+		<span class="border-b border-gray-200 py-2 dark:border-gray-700">Kürzel</span>
 		<span class="border-b border-gray-200 py-2 dark:border-gray-700">Name</span>
 		<span class="border-b border-gray-200 py-2 text-right dark:border-gray-700">Spieltage</span>
 	</div>
@@ -72,7 +72,7 @@
 	{#each data.players as p (p.id)}
 		<div class="relative col-span-full grid grid-cols-subgrid items-center border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800">
 			<a
-				href="/spieler/{encodeURIComponent(p.kuerzel)}"
+				href="/player/{encodeURIComponent(p.kuerzel)}"
 				class="flex items-center gap-2 py-2 no-underline before:absolute before:inset-0 before:content-['']"
 			>
 				<Avatar kuerzel={p.kuerzel} size={24} />

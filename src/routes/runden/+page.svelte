@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { Calendar as CalendarIcon, Club, Ellipse, Users } from 'lucide-svelte';
 	import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
 	import RangeSlider from '$lib/components/RangeSlider.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -9,6 +10,39 @@
 	let { data } = $props();
 	const filters = $derived(data.filters);
 	const bounds = $derived(data.bounds);
+
+	const totals = $derived.by(() => {
+		const rows = data.ergebnisse;
+		const datums = new Set<string>();
+		const kuerzels = new Set<string>();
+		let runden = 0;
+		let bommel = 0;
+		for (const r of rows) {
+			datums.add(r.datum);
+			kuerzels.add(r.kuerzel);
+			runden += r.runden;
+			bommel += r.bommel;
+		}
+		return {
+			spieltage: datums.size,
+			kuerzel: kuerzels.size,
+			runden,
+			bommel,
+			ergebnisse: rows.length
+		};
+	});
+	const avgSpieler = $derived(totals.spieltage ? totals.ergebnisse / totals.spieltage : null);
+	const avgRunden = $derived(totals.spieltage ? totals.runden / totals.spieltage : null);
+
+	// Cross-link to /spieltage carries only the date range. The runden / bommel
+	// filters mean different things on the two pages (per-row on /runden vs.
+	// per-day aggregates on /spieltage), so passing them through would mislead.
+	const spieltageHref = $derived.by(() => {
+		const p = new URLSearchParams();
+		if (filters.from) p.set('from', filters.from);
+		if (filters.to) p.set('to', filters.to);
+		return `/spieltage${p.size ? '?' + p.toString() : ''}`;
+	});
 
 	function pushUrl(params: Record<string, string | number | undefined>) {
 		const merged: Record<string, string | number | undefined> = {
@@ -98,8 +132,45 @@
 
 <div class="flex items-center justify-between">
 	<h1 class="text-2xl font-semibold">Runden</h1>
-	<span class="text-xs text-gray-500">eine Zeile pro Spieler · pro Spieltag</span>
+	<span class="text-xs text-gray-500">eine Zeile pro Kürzel · pro Spieltag</span>
 </div>
+
+<dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+	<div class="group rounded border border-blue-300 p-3 transition hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-blue-700 transition-colors group-hover:text-blue-800 dark:text-blue-300 dark:group-hover:text-blue-200">
+			<CalendarIcon class="size-3.5" /> Spieltage
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.spieltage}</dd>
+	</div>
+	<div class="group rounded border border-teal-300 p-3 transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm dark:border-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-teal-700 transition-colors group-hover:text-teal-800 dark:text-teal-300 dark:group-hover:text-teal-200">
+			<Users class="size-3.5" /> Kürzel
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.kuerzel}</dd>
+		{#if avgSpieler !== null}
+			<dd class="text-[10px] text-gray-500 dark:text-gray-400">
+				Ø {avgSpieler.toFixed(1)} / Spieltag
+			</dd>
+		{/if}
+	</div>
+	<div class="group rounded border border-amber-300 p-3 transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm dark:border-amber-800 dark:hover:border-amber-500 dark:hover:bg-amber-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-amber-700 transition-colors group-hover:text-amber-800 dark:text-amber-300 dark:group-hover:text-amber-200">
+			<Club class="size-3.5" /> Runden
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.runden}</dd>
+		{#if avgRunden !== null}
+			<dd class="text-[10px] text-gray-500 dark:text-gray-400">
+				Ø {avgRunden.toFixed(1)} / Spieltag
+			</dd>
+		{/if}
+	</div>
+	<div class="group rounded border border-orange-300 p-3 transition hover:-translate-y-0.5 hover:border-orange-400 hover:bg-orange-50 hover:shadow-sm dark:border-orange-800 dark:hover:border-orange-500 dark:hover:bg-orange-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-orange-700 transition-colors group-hover:text-orange-800 dark:text-orange-300 dark:group-hover:text-orange-200">
+			<Ellipse class="size-3.5" /> Bommel
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.bommel}</dd>
+	</div>
+</dl>
 
 <div class="mt-4 text-sm">
 	<div class="flex items-center justify-between">
@@ -158,6 +229,12 @@
 	</div>
 </div>
 
+<div class="mt-4">
+	<a href={spieltageHref} class="text-sm text-blue-700 hover:underline dark:text-blue-400">
+		→ Spieltage
+	</a>
+</div>
+
 {#if data.ergebnisse.length === 0}
 	<p class="mt-6 text-sm text-gray-500">Keine Runden gefunden.</p>
 {:else}
@@ -188,7 +265,7 @@
 				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 				<tr
 					class="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
-					onclick={rowGoto(`/spieler/${encodeURIComponent(e.kuerzel)}`)}
+					onclick={rowGoto(`/player/${encodeURIComponent(e.kuerzel)}`)}
 				>
 					<td class="py-2">
 						<a class="hover:underline" href="/spieltage/{e.datum}">
@@ -198,7 +275,7 @@
 					<td>
 						<a
 							class="inline-flex items-center gap-2 no-underline"
-							href="/spieler/{encodeURIComponent(e.kuerzel)}"
+							href="/player/{encodeURIComponent(e.kuerzel)}"
 						>
 							<Avatar kuerzel={e.kuerzel} size={22} />
 						</a>

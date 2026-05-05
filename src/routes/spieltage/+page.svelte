@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { Calendar as CalendarIcon, Club, Ellipse, Users } from 'lucide-svelte';
 	import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
 	import RangeSlider from '$lib/components/RangeSlider.svelte';
 	import { formatDate } from '$lib/format';
@@ -12,6 +13,40 @@
 	const canWrite = $derived(
 		page.data.user && page.data.user.role !== 'pending'
 	);
+
+	const totals = $derived.by(() => {
+		const rows = data.spieltage;
+		let runden = 0;
+		let bommel = 0;
+		let players = 0;
+		for (const r of rows) {
+			runden += r.runden;
+			bommel += r.bommel;
+			players += r.playerCount;
+		}
+		return {
+			spieltage: rows.length,
+			kuerzel: data.kuerzelCount,
+			runden,
+			bommel,
+			players
+		};
+	});
+	const avgSpieler = $derived(totals.spieltage ? totals.players / totals.spieltage : null);
+	const avgRunden = $derived(totals.spieltage ? totals.runden / totals.spieltage : null);
+
+	// Cross-link to /runden carrying the common filters. minPlayers/maxPlayers
+	// don't apply on /runden, so we drop them.
+	const rundenHref = $derived.by(() => {
+		const p = new URLSearchParams();
+		if (filters.from) p.set('from', filters.from);
+		if (filters.to) p.set('to', filters.to);
+		if (filters.minRunden !== undefined) p.set('minRunden', String(filters.minRunden));
+		if (filters.maxRunden !== undefined) p.set('maxRunden', String(filters.maxRunden));
+		if (filters.minBommel !== undefined) p.set('minBommel', String(filters.minBommel));
+		if (filters.maxBommel !== undefined) p.set('maxBommel', String(filters.maxBommel));
+		return `/runden${p.size ? '?' + p.toString() : ''}`;
+	});
 
 	function pushUrl(params: Record<string, string | number | undefined>) {
 		const merged: Record<string, string | number | undefined> = {
@@ -120,6 +155,43 @@
 	{/if}
 </div>
 
+<dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+	<div class="group rounded border border-blue-300 p-3 transition hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-blue-700 transition-colors group-hover:text-blue-800 dark:text-blue-300 dark:group-hover:text-blue-200">
+			<CalendarIcon class="size-3.5" /> Spieltage
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.spieltage}</dd>
+	</div>
+	<div class="group rounded border border-teal-300 p-3 transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm dark:border-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-teal-700 transition-colors group-hover:text-teal-800 dark:text-teal-300 dark:group-hover:text-teal-200">
+			<Users class="size-3.5" /> Kürzel
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.kuerzel}</dd>
+		{#if avgSpieler !== null}
+			<dd class="text-[10px] text-gray-500 dark:text-gray-400">
+				Ø {avgSpieler.toFixed(1)} / Spieltag
+			</dd>
+		{/if}
+	</div>
+	<div class="group rounded border border-amber-300 p-3 transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm dark:border-amber-800 dark:hover:border-amber-500 dark:hover:bg-amber-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-amber-700 transition-colors group-hover:text-amber-800 dark:text-amber-300 dark:group-hover:text-amber-200">
+			<Club class="size-3.5" /> Runden
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.runden}</dd>
+		{#if avgRunden !== null}
+			<dd class="text-[10px] text-gray-500 dark:text-gray-400">
+				Ø {avgRunden.toFixed(1)} / Spieltag
+			</dd>
+		{/if}
+	</div>
+	<div class="group rounded border border-orange-300 p-3 transition hover:-translate-y-0.5 hover:border-orange-400 hover:bg-orange-50 hover:shadow-sm dark:border-orange-800 dark:hover:border-orange-500 dark:hover:bg-orange-950/60">
+		<dt class="flex items-center gap-1.5 text-xs text-orange-700 transition-colors group-hover:text-orange-800 dark:text-orange-300 dark:group-hover:text-orange-200">
+			<Ellipse class="size-3.5" /> Bommel
+		</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{totals.bommel}</dd>
+	</div>
+</dl>
+
 <div class="mt-4 text-sm">
 	<div class="flex items-center justify-between">
 		<span class="font-medium">Filter</span>
@@ -144,7 +216,7 @@
 		</div>
 		<div>
 			<span class="block text-xs font-medium text-gray-500 dark:text-gray-400">
-				Spieler ({filters.minPlayers ?? 0} – {filters.maxPlayers ?? bounds.max_players})
+				Kürzel ({filters.minPlayers ?? 0} – {filters.maxPlayers ?? bounds.max_players})
 			</span>
 			<div class="mt-3 px-2">
 				<RangeSlider
@@ -152,8 +224,8 @@
 					max={bounds.max_players}
 					from={filters.minPlayers}
 					to={filters.maxPlayers}
-					fromLabel="min Spieler"
-					toLabel="max Spieler"
+					fromLabel="min Kürzel"
+					toLabel="max Kürzel"
 					onchange={onPlayersChange}
 				/>
 			</div>
@@ -193,6 +265,12 @@
 	</div>
 </div>
 
+<div class="mt-4">
+	<a href={rundenHref} class="text-sm text-blue-700 hover:underline dark:text-blue-400">
+		→ Runden
+	</a>
+</div>
+
 {#if data.spieltage.length === 0}
 	<p class="mt-6 text-sm text-gray-500">Keine Spieltage gefunden.</p>
 {:else}
@@ -206,7 +284,7 @@
 					<a href={toggleSort('date')} class="hover:underline">Datum{arrow('date')}</a>
 				</th>
 				<th class="font-medium">
-					<a href={toggleSort('players')} class="hover:underline">Spieler{arrow('players')}</a>
+					<a href={toggleSort('players')} class="hover:underline">Kürzel{arrow('players')}</a>
 				</th>
 				<th class="font-medium">
 					<a href={toggleSort('runden')} class="hover:underline">Runden{arrow('runden')}</a>

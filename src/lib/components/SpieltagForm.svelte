@@ -256,7 +256,7 @@
 			</datalist>
 			<p class="mt-1 text-xs text-gray-500">
 				Unbekannte Kürzel werden automatisch angelegt — den Namen kannst du
-				später unter <a class="underline" href="/spieler">Spieler</a> ergänzen.
+				später unter <a class="underline" href="/player">Spieler</a> ergänzen.
 			</p>
 		</div>
 
