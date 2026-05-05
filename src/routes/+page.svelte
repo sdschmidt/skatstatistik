@@ -114,67 +114,71 @@
 	{#if stats.length === 0}
 		<p class="mt-4 text-sm text-gray-500">Keine Daten in {heading}.</p>
 	{:else}
-		<table class="mt-4 w-full text-sm">
-			<thead>
-				<tr class="border-b border-gray-200 text-left dark:border-gray-700">
-					<th class="py-2 font-medium">
-						<a href={toggleSort('kuerzel')} class="hover:underline">Kürzel{arrow('kuerzel')}</a>
-					</th>
-					<th class="font-medium">
-						<a href={toggleSort('name')} class="hover:underline">Name{arrow('name')}</a>
-					</th>
-					<th class="font-medium">
-						<a href={toggleSort('spieltage')} class="hover:underline">Spieltage{arrow('spieltage')}</a>
-					</th>
-					<th class="font-medium">
-						<a href={toggleSort('runden')} class="hover:underline">Runden{arrow('runden')}</a>
-					</th>
-					<th class="font-medium">
-						<a href={toggleSort('bommel')} class="hover:underline">Bommel{arrow('bommel')}</a>
-					</th>
-					<th class="font-medium">
-						<a href={toggleSort('bommel_per_runde')} class="hover:underline">
-							Bommel/R.{arrow('bommel_per_runde')}
-						</a>
-					</th>
-					<th class="font-medium">
-						<a href={toggleSort('gewinnrate')} class="hover:underline">Gewinn{arrow('gewinnrate')}</a>
-					</th>
-					<th class="font-medium">
-						<a href={toggleSort('anwesenheit')} class="hover:underline">
-							Anwesenh.{arrow('anwesenheit')}
-						</a>
-					</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each stats as s (s.player_id)}
-					<tr class="border-b border-gray-100 dark:border-gray-800">
-						<td class="py-1">
-							<a
-								class="font-mono hover:underline"
-								href="/spieler/{encodeURIComponent(s.kuerzel)}"
-							>
-								{s.kuerzel}
+		<div class="-mx-4 mt-4 overflow-x-auto px-4">
+			<table class="min-w-full text-sm whitespace-nowrap">
+				<thead>
+					<tr class="border-b border-gray-200 text-left dark:border-gray-700">
+						<th class="py-2 pr-4 font-medium">
+							<a href={toggleSort('kuerzel')} class="hover:underline">Kürzel{arrow('kuerzel')}</a>
+						</th>
+						<th class="pr-4 font-medium">
+							<a href={toggleSort('name')} class="hover:underline">Name{arrow('name')}</a>
+						</th>
+						<th class="pr-4 font-medium">
+							<a href={toggleSort('spieltage')} class="hover:underline">
+								<span class="hidden sm:inline">Spieltage</span><span class="sm:hidden">Tage</span>{arrow('spieltage')}
 							</a>
-						</td>
-						<td>
-							{#if s.name}
-								<a class="hover:underline" href="/spieler/{encodeURIComponent(s.kuerzel)}">
-									{s.name}
-								</a>
-							{/if}
-						</td>
-						<td class="tabular-nums">{s.spieltage}</td>
-						<td class="tabular-nums">{s.runden}</td>
-						<td class="tabular-nums">{s.bommel}</td>
-						<td class="tabular-nums">{formatPercent(s.bommel_per_runde)}</td>
-						<td class="tabular-nums">{formatPercent(s.gewinnrate)}</td>
-						<td class="tabular-nums">{formatPercent(s.anwesenheit)}</td>
+						</th>
+						<th class="pr-4 font-medium">
+							<a href={toggleSort('runden')} class="hover:underline">Runden{arrow('runden')}</a>
+						</th>
+						<th class="pr-4 font-medium">
+							<a href={toggleSort('bommel')} class="hover:underline">Bommel{arrow('bommel')}</a>
+						</th>
+						<th class="pr-4 font-medium">
+							<a href={toggleSort('bommel_per_runde')} class="hover:underline">
+								<span class="hidden sm:inline">Bommel/R.</span><span class="sm:hidden">B/R</span>{arrow('bommel_per_runde')}
+							</a>
+						</th>
+						<th class="pr-4 font-medium">
+							<a href={toggleSort('gewinnrate')} class="hover:underline">Gewinn{arrow('gewinnrate')}</a>
+						</th>
+						<th class="pr-2 font-medium">
+							<a href={toggleSort('anwesenheit')} class="hover:underline">
+								<span class="hidden sm:inline">Anwesenh.</span><span class="sm:hidden">Anw.</span>{arrow('anwesenheit')}
+							</a>
+						</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each stats as s (s.player_id)}
+						<tr class="border-b border-gray-100 dark:border-gray-800">
+							<td class="py-1 pr-4">
+								<a
+									class="font-mono hover:underline"
+									href="/spieler/{encodeURIComponent(s.kuerzel)}"
+								>
+									{s.kuerzel}
+								</a>
+							</td>
+							<td class="pr-4">
+								{#if s.name}
+									<a class="hover:underline" href="/spieler/{encodeURIComponent(s.kuerzel)}">
+										{s.name}
+									</a>
+								{/if}
+							</td>
+							<td class="pr-4 tabular-nums">{s.spieltage}</td>
+							<td class="pr-4 tabular-nums">{s.runden}</td>
+							<td class="pr-4 tabular-nums">{s.bommel}</td>
+							<td class="pr-4 tabular-nums">{formatPercent(s.bommel_per_runde)}</td>
+							<td class="pr-4 tabular-nums">{formatPercent(s.gewinnrate)}</td>
+							<td class="pr-2 tabular-nums">{formatPercent(s.anwesenheit)}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 
 		{@const drillFrom = isAll ? '' : `${year}-01-01`}
 		{@const drillTo = isAll ? '' : `${year}-12-31`}
