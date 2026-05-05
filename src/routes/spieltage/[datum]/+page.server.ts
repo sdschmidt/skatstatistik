@@ -10,8 +10,8 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions: Actions = {
-	delete: async ({ params }) => {
-		// TODO(auth): require role === 'admin'
+	delete: async ({ params, locals }) => {
+		if (locals.user?.role !== 'admin') return fail(403, { error: 'Nur Admins.' });
 		const sp = await getSpieltag(params.datum);
 		if (!sp) return fail(404);
 		if (sp.photoPath) await deletePhoto(sp.photoPath);

@@ -5,8 +5,8 @@ import { spieltage } from '$server/schema';
 import { loadPhoto } from '$server/photos';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ params }) => {
-	// TODO(auth): require an authenticated, non-pending session
+export const GET: RequestHandler = async ({ params, locals }) => {
+	if (!locals.user || locals.user.role === 'pending') error(403);
 	const [s] = await db
 		.select({ photoPath: spieltage.photoPath })
 		.from(spieltage)

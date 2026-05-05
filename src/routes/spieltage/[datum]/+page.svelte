@@ -1,35 +1,39 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { formatDate, formatPercent } from '$lib/format';
 	let { data } = $props();
 	const spieltag = $derived(data.spieltag);
 	const totalRunden = $derived(spieltag.ergebnisse.reduce((s, e) => s + e.runden, 0));
 	const totalBommel = $derived(spieltag.ergebnisse.reduce((s, e) => s + e.bommel, 0));
+	const isAdmin = $derived(page.data.user?.role === 'admin');
 </script>
 
 <div class="flex items-center justify-between gap-4">
 	<h1 class="text-2xl font-semibold">
 		Spieltag <span class="font-mono">{formatDate(spieltag.datum)}</span>
 	</h1>
-	<div class="flex items-center gap-2 text-sm">
-		<a
-			href="/spieltage/{spieltag.datum}/edit"
-			class="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
-		>
-			Bearbeiten
-		</a>
-		<form
-			method="POST"
-			action="?/delete"
-			onsubmit={(e) => {
-				if (!confirm(`Spieltag ${formatDate(spieltag.datum)} und alle Ergebnisse löschen?`))
-					e.preventDefault();
-			}}
-		>
-			<button class="rounded border border-red-300 px-3 py-1.5 text-red-600 hover:bg-red-50 dark:border-red-700 dark:hover:bg-red-950">
-				Löschen
-			</button>
-		</form>
-	</div>
+	{#if isAdmin}
+		<div class="flex items-center gap-2 text-sm">
+			<a
+				href="/spieltage/{spieltag.datum}/edit"
+				class="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+			>
+				Bearbeiten
+			</a>
+			<form
+				method="POST"
+				action="?/delete"
+				onsubmit={(e) => {
+					if (!confirm(`Spieltag ${formatDate(spieltag.datum)} und alle Ergebnisse löschen?`))
+						e.preventDefault();
+				}}
+			>
+				<button class="rounded border border-red-300 px-3 py-1.5 text-red-600 hover:bg-red-50 dark:border-red-700 dark:hover:bg-red-950">
+					Löschen
+				</button>
+			</form>
+		</div>
+	{/if}
 </div>
 
 {#if spieltag.photoPath}

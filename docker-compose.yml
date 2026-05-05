@@ -47,7 +47,7 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     ports:
-      - "1025:1025"   # SMTP
+      - "11025:1025"  # SMTP (1025 collides with Proton Mail Bridge / similar local relays on macOS)
       - "8025:8025"   # Web UI
     restart: unless-stopped
 

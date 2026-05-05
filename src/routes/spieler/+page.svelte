@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	let { data, form } = $props();
+	const isAdmin = $derived(page.data.user?.role === 'admin');
 </script>
 
 <div class="flex items-center justify-between">
@@ -25,13 +27,15 @@
 				class="w-32 rounded border border-gray-300 p-1 uppercase dark:border-gray-700 dark:bg-gray-800"
 			/>
 		</label>
-		<label class="flex flex-col">
-			<span class="text-xs text-gray-500">Name</span>
-			<input
-				name="name"
-				class="w-64 rounded border border-gray-300 p-1 dark:border-gray-700 dark:bg-gray-800"
-			/>
-		</label>
+		{#if isAdmin}
+			<label class="flex flex-col">
+				<span class="text-xs text-gray-500">Name</span>
+				<input
+					name="name"
+					class="w-64 rounded border border-gray-300 p-1 dark:border-gray-700 dark:bg-gray-800"
+				/>
+			</label>
+		{/if}
 		<button class="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700">
 			Hinzufügen
 		</button>
@@ -56,25 +60,31 @@
 			>
 				{p.kuerzel}
 			</a>
-			<form
-				method="POST"
-				action="?/rename"
-				use:enhance
-				class="flex items-center gap-2 border-b border-gray-100 py-1.5 dark:border-gray-800"
-			>
-				<input type="hidden" name="id" value={p.id} />
-				<input
-					name="name"
-					value={p.name ?? ''}
-					placeholder="Name (optional)"
-					class="w-full max-w-md rounded border border-gray-300 p-1 dark:border-gray-700 dark:bg-gray-800"
-				/>
-				<button
-					class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+			{#if isAdmin}
+				<form
+					method="POST"
+					action="?/rename"
+					use:enhance
+					class="flex items-center gap-2 border-b border-gray-100 py-1.5 dark:border-gray-800"
 				>
-					Speichern
-				</button>
-			</form>
+					<input type="hidden" name="id" value={p.id} />
+					<input
+						name="name"
+						value={p.name ?? ''}
+						placeholder="Name (optional)"
+						class="w-full max-w-md rounded border border-gray-300 p-1 dark:border-gray-700 dark:bg-gray-800"
+					/>
+					<button
+						class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+					>
+						Speichern
+					</button>
+				</form>
+			{:else}
+				<span class="border-b border-gray-100 py-2 dark:border-gray-800">
+					{p.name ?? ''}
+				</span>
+			{/if}
 			<span
 				class="border-b border-gray-100 py-2 text-right tabular-nums dark:border-gray-800"
 			>

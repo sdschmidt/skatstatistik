@@ -10,19 +10,21 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	add: async ({ request }) => {
-		// TODO(auth): require role in {user, admin}
+	add: async ({ request, locals }) => {
+		if (!locals.user || locals.user.role === 'pending') {
+			return fail(403, { error: 'Nicht angemeldet.' });
+		}
 		const data = await request.formData();
 		const kuerzel = String(data.get('kuerzel') ?? '').trim();
 		const name = String(data.get('name') ?? '').trim() || null;
 		if (!kuerzel) return fail(400, { error: 'Kürzel darf nicht leer sein.', kuerzel, name });
 		const id = await ensurePlayer(kuerzel);
-		if (name) await renamePlayer(id, name);
+		if (name && locals.user.role === 'admin') await renamePlayer(id, name);
 		return { ok: true };
 	},
 
-	rename: async ({ request }) => {
-		// TODO(auth): require role === 'admin'
+	rename: async ({ request, locals }) => {
+		if (locals.user?.role !== 'admin') return fail(403, { error: 'Nur Admins.' });
 		const data = await request.formData();
 		const id = String(data.get('id') ?? '');
 		const name = String(data.get('name') ?? '').trim() || null;

@@ -1,3 +1,4 @@
+import { fail } from '@sveltejs/kit';
 import { listPlayers } from '$server/queries';
 import { handleSpieltagSubmit } from '$server/spieltagAction';
 import type { Actions, PageServerLoad } from './$types';
@@ -10,8 +11,10 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	default: async ({ request }) => {
-		// TODO(auth): require role in {user, admin}
+	default: async ({ request, locals }) => {
+		if (!locals.user || locals.user.role === 'pending') {
+			return fail(403, { error: 'Nicht angemeldet.' });
+		}
 		return handleSpieltagSubmit(await request.formData());
 	}
 };
