@@ -1,12 +1,15 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { deleteSpieltag, getSpieltag } from '$server/queries';
+import { adjacentSpieltage, deleteSpieltag, getSpieltag } from '$server/queries';
 import { deletePhoto } from '$server/photos';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const spieltag = await getSpieltag(params.datum);
+	const [spieltag, adjacent] = await Promise.all([
+		getSpieltag(params.datum),
+		adjacentSpieltage(params.datum)
+	]);
 	if (!spieltag) error(404, 'Spieltag nicht gefunden');
-	return { spieltag };
+	return { spieltag, adjacent };
 };
 
 export const actions: Actions = {

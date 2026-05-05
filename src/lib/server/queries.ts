@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, lt, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from './db';
 import { ergebnisse, players, spieltage } from './schema';
 
@@ -271,6 +271,24 @@ export async function ergebnisseBounds() {
 		from ergebnisse
 	`);
 	return rows[0] ?? { max_runden: 0, max_bommel: 0, min_date: null, max_date: null };
+}
+
+export async function adjacentSpieltage(
+	datum: string
+): Promise<{ prev: string | null; next: string | null }> {
+	const [prev] = await db
+		.select({ datum: spieltage.datum })
+		.from(spieltage)
+		.where(lt(spieltage.datum, datum))
+		.orderBy(desc(spieltage.datum))
+		.limit(1);
+	const [next] = await db
+		.select({ datum: spieltage.datum })
+		.from(spieltage)
+		.where(gt(spieltage.datum, datum))
+		.orderBy(asc(spieltage.datum))
+		.limit(1);
+	return { prev: prev?.datum ?? null, next: next?.datum ?? null };
 }
 
 export async function getSpieltag(datum: string) {

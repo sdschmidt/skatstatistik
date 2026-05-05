@@ -10,9 +10,7 @@
 </script>
 
 <div class="flex items-center justify-between gap-4">
-	<h1 class="text-2xl font-semibold">
-		Spieltag <span class="font-mono">{formatDate(spieltag.datum)}</span>
-	</h1>
+	<h1 class="text-2xl font-semibold">Spieltag</h1>
 	<div class="flex items-center gap-2 text-sm">
 		{#if canWrite}
 			<a
@@ -38,6 +36,33 @@
 		{/if}
 	</div>
 </div>
+
+<nav class="mt-4 flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
+	{#if data.adjacent.prev}
+		<a
+			href="/spieltage/{data.adjacent.prev}"
+			rel="prev"
+			class="rounded-t border-b-2 border-transparent px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+		>
+			← <span class="font-mono">{formatDate(data.adjacent.prev)}</span>
+		</a>
+	{/if}
+	<span
+		aria-current="page"
+		class="rounded-t border-b-2 border-blue-600 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-400"
+	>
+		<span class="font-mono">{formatDate(spieltag.datum)}</span>
+	</span>
+	{#if data.adjacent.next}
+		<a
+			href="/spieltage/{data.adjacent.next}"
+			rel="next"
+			class="rounded-t border-b-2 border-transparent px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+		>
+			<span class="font-mono">{formatDate(data.adjacent.next)}</span> →
+		</a>
+	{/if}
+</nav>
 
 {#if spieltag.photoPath}
 	<a href="/api/photos/{spieltag.datum}" target="_blank" rel="noopener" class="mt-4 inline-block">
