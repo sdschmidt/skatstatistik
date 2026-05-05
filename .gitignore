@@ -22,6 +22,9 @@ dist/
 *.swp
 *~
 
+# Local photo store (dev)
+data/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

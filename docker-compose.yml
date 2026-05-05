@@ -13,6 +13,7 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      PHOTOS_DIR: /data/photos
     depends_on:
       db:
         condition: service_healthy
