@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { afterNavigate, goto } from '$app/navigation';
+	import { afterNavigate, goto, invalidateAll } from '$app/navigation';
 	import logo from '$lib/assets/logo.png';
 	import { authClient } from '$lib/auth-client';
 	import DarkToggle from '$lib/components/DarkToggle.svelte';
@@ -16,6 +16,10 @@
 	async function handleSignOut() {
 		mobileOpen = false;
 		await authClient.signOut();
+		// goto('/') is a no-op when we're already on /, so the layout's
+		// load() doesn't re-run and data.user stays stale. invalidateAll()
+		// forces every load to re-run with the now-cleared session cookie.
+		await invalidateAll();
 		await goto('/');
 	}
 </script>
