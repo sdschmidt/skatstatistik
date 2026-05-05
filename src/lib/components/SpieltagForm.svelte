@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { toast } from '$lib/toast';
 
 	type PlayerRow = { kuerzel: string; bommel: number; runden: number };
 	type AllPlayer = { kuerzel: string; name: string | null };
@@ -115,9 +116,11 @@
 		return async ({ result }) => {
 			busy = false;
 			if (result.type === 'redirect') {
+				toast('Spieltag gespeichert');
 				await goto(result.location);
 			} else if (result.type === 'failure') {
 				formError = (result.data as { error?: string })?.error ?? 'Fehler beim Speichern.';
+				toast(formError, 'error');
 			}
 		};
 	}}

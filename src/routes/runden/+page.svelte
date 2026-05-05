@@ -2,7 +2,9 @@
 	import { goto } from '$app/navigation';
 	import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
 	import RangeSlider from '$lib/components/RangeSlider.svelte';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import { formatDate } from '$lib/format';
+	import { rowGoto } from '$lib/rowLink';
 
 	let { data } = $props();
 	const filters = $derived(data.filters);
@@ -99,7 +101,7 @@
 	<span class="text-xs text-gray-500">eine Zeile pro Spieler · pro Spieltag</span>
 </div>
 
-<div class="mt-4 rounded border border-gray-200 p-4 text-sm dark:border-gray-700">
+<div class="mt-4 text-sm">
 	<div class="flex items-center justify-between">
 		<span class="font-medium">Filter</span>
 		<button
@@ -182,29 +184,26 @@
 		</thead>
 		<tbody>
 			{#each data.ergebnisse as e (e.datum + e.kuerzel)}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 				<tr
-					class="border-b border-gray-100 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+					class="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+					onclick={rowGoto(`/spieler/${encodeURIComponent(e.kuerzel)}`)}
 				>
 					<td class="py-2">
-						<a class="font-mono underline" href="/spieltage/{e.datum}">
+						<a class="hover:underline" href="/spieltage/{e.datum}">
 							{formatDate(e.datum)}
 						</a>
 					</td>
 					<td>
 						<a
-							class="font-mono hover:underline"
+							class="inline-flex items-center gap-2 no-underline"
 							href="/spieler/{encodeURIComponent(e.kuerzel)}"
 						>
-							{e.kuerzel}
+							<Avatar kuerzel={e.kuerzel} size={22} />
 						</a>
 					</td>
-					<td>
-						{#if e.name}
-							<a class="hover:underline" href="/spieler/{encodeURIComponent(e.kuerzel)}">
-								{e.name}
-							</a>
-						{/if}
-					</td>
+					<td>{e.name ?? ''}</td>
 					<td class="tabular-nums">{e.bommel}</td>
 					<td class="tabular-nums">{e.runden}</td>
 				</tr>

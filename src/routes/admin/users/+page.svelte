@@ -1,8 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatDate } from '$lib/format';
+	import { toast } from '$lib/toast';
 
 	let { data, form } = $props();
+
+	function onSetRoleResult() {
+		return async ({ result, update }: { result: { type: string; data?: unknown }; update: () => Promise<void> }) => {
+			if (result.type === 'success') {
+				toast('Rolle aktualisiert');
+			} else if (result.type === 'failure') {
+				toast((result.data as { error?: string } | undefined)?.error ?? 'Fehler', 'error');
+			}
+			await update();
+		};
+	}
 
 	function isoDay(d: Date | string): string {
 		const date = typeof d === 'string' ? new Date(d) : d;
@@ -53,7 +65,7 @@
 					<span class="rounded px-2 py-0.5 text-xs {badge(u.role)}">{u.role}</span>
 				</td>
 				<td>
-					<form method="POST" action="?/setRole" use:enhance class="flex items-center gap-1">
+					<form method="POST" action="?/setRole" use:enhance={onSetRoleResult} class="flex items-center gap-1">
 						<input type="hidden" name="id" value={u.id} />
 						<select
 							name="role"

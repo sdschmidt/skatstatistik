@@ -4,6 +4,7 @@
 	import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
 	import RangeSlider from '$lib/components/RangeSlider.svelte';
 	import { formatDate } from '$lib/format';
+	import { rowGoto } from '$lib/rowLink';
 
 	let { data } = $props();
 	const filters = $derived(data.filters);
@@ -119,7 +120,7 @@
 	{/if}
 </div>
 
-<div class="mt-4 rounded border border-gray-200 p-4 text-sm dark:border-gray-700">
+<div class="mt-4 text-sm">
 	<div class="flex items-center justify-between">
 		<span class="font-medium">Filter</span>
 		<button
@@ -218,11 +219,14 @@
 		</thead>
 		<tbody>
 			{#each data.spieltage as s (s.datum)}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 				<tr
-					class="border-b border-gray-100 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+					class="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+					onclick={rowGoto(`/spieltage/${s.datum}`)}
 				>
 					<td class="py-2">
-						<a class="font-mono underline" href="/spieltage/{s.datum}">
+						<a class="no-underline hover:underline" href="/spieltage/{s.datum}">
 							{formatDate(s.datum)}
 						</a>
 					</td>

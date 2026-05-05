@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { formatDate, formatPercent } from '$lib/format';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import { formatDate, formatLongDate, formatPercent } from '$lib/format';
+	import { rowGoto } from '$lib/rowLink';
 	let { data } = $props();
 	const spieltag = $derived(data.spieltag);
 	const totalRunden = $derived(spieltag.ergebnisse.reduce((s, e) => s + e.runden, 0));
@@ -10,7 +12,7 @@
 </script>
 
 <div class="flex items-center justify-between gap-4">
-	<h1 class="text-2xl font-semibold">Spieltag</h1>
+	<h1 class="text-2xl font-semibold">{formatLongDate(spieltag.datum)}</h1>
 	<div class="flex items-center gap-2 text-sm">
 		{#if canWrite}
 			<a
@@ -90,22 +92,21 @@
 	</thead>
 	<tbody>
 		{#each spieltag.ergebnisse as e (e.playerId)}
-			<tr class="border-b border-gray-100 dark:border-gray-800">
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<tr
+				class="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+				onclick={rowGoto(`/spieler/${encodeURIComponent(e.kuerzel)}`)}
+			>
 				<td class="py-1">
 					<a
-						class="font-mono hover:underline"
+						class="inline-flex items-center gap-2 no-underline"
 						href="/spieler/{encodeURIComponent(e.kuerzel)}"
 					>
-						{e.kuerzel}
+						<Avatar kuerzel={e.kuerzel} size={22} />
 					</a>
 				</td>
-				<td>
-					{#if e.name}
-						<a class="hover:underline" href="/spieler/{encodeURIComponent(e.kuerzel)}">
-							{e.name}
-						</a>
-					{/if}
-				</td>
+				<td>{e.name ?? ''}</td>
 				<td>{e.bommel}</td>
 				<td>{e.runden}</td>
 				<td>{formatPercent(e.runden ? e.bommel / e.runden : null)}</td>
@@ -120,3 +121,12 @@
 		</tr>
 	</tbody>
 </table>
+
+<div class="mt-3">
+	<a
+		href="/?year={spieltag.datum.slice(0, 4)}"
+		class="text-sm text-blue-700 hover:underline dark:text-blue-400"
+	>
+		→ Statistik {spieltag.datum.slice(0, 4)}
+	</a>
+</div>

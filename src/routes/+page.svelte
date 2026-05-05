@@ -1,7 +1,14 @@
 <script lang="ts">
+	import { Calendar as CalendarIcon, Club } from 'lucide-svelte';
+	import Trend from '$lib/components/Trend.svelte';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import Calendar from '$lib/components/Calendar.svelte';
 	import Chart from '$lib/components/Chart.svelte';
+	import Sparkline from '$lib/components/Sparkline.svelte';
 	import { formatPercent } from '$lib/format';
+	import { paletteFor } from '$lib/playerColor';
+	import { rowGoto } from '$lib/rowLink';
+	import { theme } from '$lib/theme.svelte';
 	import type { ApexOptions } from 'apexcharts';
 
 	let { data } = $props();
@@ -32,10 +39,13 @@
 	}
 
 	const chartLabels = $derived(stats.map((s) => s.kuerzel));
+	const chartColors = $derived(stats.map((s) => paletteFor(s.kuerzel)));
 	const heading = $derived(isAll ? 'Gesamt' : `Jahr ${year}`);
 
 	const bommelChart: ApexOptions = $derived({
 		chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
+		plotOptions: { bar: { distributed: true } },
+		legend: { show: false },
 		series: [
 			{
 				name: 'Bommel/Runde',
@@ -47,12 +57,13 @@
 		xaxis: { categories: chartLabels },
 		yaxis: { labels: { formatter: (v) => `${v}%` } },
 		dataLabels: { enabled: false },
-		colors: ['#1e40af'],
-		title: { text: 'Bommel pro Runde', align: 'left', style: { fontSize: '14px' } }
+		colors: chartColors
 	});
 
 	const anwesenheitChart: ApexOptions = $derived({
 		chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
+		plotOptions: { bar: { distributed: true } },
+		legend: { show: false },
 		series: [
 			{
 				name: 'Anwesenheit',
@@ -64,8 +75,7 @@
 		xaxis: { categories: chartLabels },
 		yaxis: { labels: { formatter: (v) => `${v}%` }, max: 100 },
 		dataLabels: { enabled: false },
-		colors: ['#2563eb'],
-		title: { text: 'Anwesenheit', align: 'left', style: { fontSize: '14px' } }
+		colors: chartColors
 	});
 </script>
 
@@ -97,12 +107,19 @@
 		{/each}
 	</nav>
 
-	<p class="mt-3 text-sm text-gray-600 dark:text-gray-400">
-		<strong>{totals.spieltage}</strong>
-		{totals.spieltage === 1 ? 'Spieltag' : 'Spieltage'} ·
-		<strong>{totals.runden}</strong> Spieler-Runden
-		{isAll ? 'gesamt' : `gesamt im Jahr ${year}`}
-		<span class="text-xs">(Summe der pro Spieler erfassten Runden)</span>.
+	<p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+		<span class="inline-flex items-center gap-1.5">
+			<CalendarIcon class="size-4" />
+			<strong>{totals.spieltage}</strong>
+			{totals.spieltage === 1 ? 'Spieltag' : 'Spieltage'}
+		</span>
+		<span class="inline-flex items-center gap-1.5">
+			<Club class="size-4" />
+			<strong>{totals.runden}</strong> Spieler-Runden
+		</span>
+		<span class="text-xs">
+			{isAll ? 'gesamt' : `im Jahr ${year}`} (Summe der pro Spieler erfassten Runden)
+		</span>
 	</p>
 
 	{#if calendar.length > 0}
@@ -143,37 +160,40 @@
 						<th class="pr-4 font-medium">
 							<a href={toggleSort('gewinnrate')} class="hover:underline">Gewinn{arrow('gewinnrate')}</a>
 						</th>
-						<th class="pr-2 font-medium">
+						<th class="pr-4 font-medium">
 							<a href={toggleSort('anwesenheit')} class="hover:underline">
 								<span class="hidden sm:inline">Anwesenh.</span><span class="sm:hidden">Anw.</span>{arrow('anwesenheit')}
 							</a>
+						</th>
+						<th class="pr-2 font-medium" title="Bommel/Runde-Verlauf über alle Jahre">
+							Verlauf
 						</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each stats as s (s.player_id)}
-						<tr class="border-b border-gray-100 dark:border-gray-800">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+						<tr
+							class="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+							onclick={rowGoto(`/spieler/${encodeURIComponent(s.kuerzel)}`)}
+						>
 							<td class="py-1 pr-4">
 								<a
-									class="font-mono hover:underline"
+									class="inline-flex items-center gap-2 no-underline"
 									href="/spieler/{encodeURIComponent(s.kuerzel)}"
 								>
-									{s.kuerzel}
+									<Avatar kuerzel={s.kuerzel} size={22} />
 								</a>
 							</td>
-							<td class="pr-4">
-								{#if s.name}
-									<a class="hover:underline" href="/spieler/{encodeURIComponent(s.kuerzel)}">
-										{s.name}
-									</a>
-								{/if}
-							</td>
-							<td class="pr-4 tabular-nums">{s.spieltage}</td>
-							<td class="pr-4 tabular-nums">{s.runden}</td>
-							<td class="pr-4 tabular-nums">{s.bommel}</td>
-							<td class="pr-4 tabular-nums">{formatPercent(s.bommel_per_runde)}</td>
-							<td class="pr-4 tabular-nums">{formatPercent(s.gewinnrate)}</td>
-							<td class="pr-2 tabular-nums">{formatPercent(s.anwesenheit)}</td>
+							<td class="pr-4">{s.name ?? ''}</td>
+							<td class="pr-4 tabular-nums">{s.spieltage} <Trend prev={s.prev?.spieltage ?? null} curr={s.spieltage} format="count" /></td>
+							<td class="pr-4 tabular-nums">{s.runden} <Trend prev={s.prev?.runden ?? null} curr={s.runden} format="count" /></td>
+							<td class="pr-4 tabular-nums">{s.bommel} <Trend prev={s.prev?.bommel ?? null} curr={s.bommel} format="count" lowerIsBetter /></td>
+							<td class="pr-4 tabular-nums">{formatPercent(s.bommel_per_runde)} {#if isAll}<Trend prev={s.recent?.bpr_prev ?? null} curr={s.recent?.bpr_curr ?? null} prevLabel="vorherige 50 Runden" lowerIsBetter />{:else}<Trend prev={s.prev?.bommel_per_runde ?? null} curr={s.bommel_per_runde === null ? null : Number(s.bommel_per_runde)} lowerIsBetter />{/if}</td>
+							<td class="pr-4 tabular-nums">{formatPercent(s.gewinnrate)} {#if isAll}<Trend prev={s.recent?.gewinn_prev ?? null} curr={s.recent?.gewinn_curr ?? null} prevLabel="vorherige 50 Runden" />{:else}<Trend prev={s.prev?.gewinnrate ?? null} curr={s.gewinnrate === null ? null : Number(s.gewinnrate)} />{/if}</td>
+							<td class="pr-4 tabular-nums">{formatPercent(s.anwesenheit)} {#if isAll}<Trend prev={s.recent?.anwesenheit_prev ?? null} curr={s.recent?.anwesenheit_curr ?? null} prevLabel="vorherige 16 Spieltage" />{:else}<Trend prev={s.prev?.anwesenheit ?? null} curr={s.anwesenheit === null ? null : Number(s.anwesenheit)} />{/if}</td>
+							<td class="pr-2"><Sparkline values={s.spark} /></td>
 						</tr>
 					{/each}
 				</tbody>
@@ -194,14 +214,20 @@
 
 		<div class="mt-8 grid gap-6 lg:grid-cols-2">
 			<div>
-				{#key heading}
-					<Chart options={bommelChart} />
-				{/key}
+				<h2 class="text-sm font-medium">Bommel pro Runde</h2>
+				<div class="mt-2">
+					{#key `${heading}:${theme.isDark}`}
+						<Chart options={bommelChart} />
+					{/key}
+				</div>
 			</div>
 			<div>
-				{#key heading}
-					<Chart options={anwesenheitChart} />
-				{/key}
+				<h2 class="text-sm font-medium">Anwesenheit</h2>
+				<div class="mt-2">
+					{#key `${heading}:${theme.isDark}`}
+						<Chart options={anwesenheitChart} />
+					{/key}
+				</div>
 			</div>
 		</div>
 	{/if}

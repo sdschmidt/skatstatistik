@@ -1,10 +1,12 @@
 <script lang="ts">
 	import '../app.css';
-	import { afterNavigate, goto, invalidateAll } from '$app/navigation';
+	import { afterNavigate, goto, invalidateAll, onNavigate } from '$app/navigation';
 	import { Menu, X } from 'lucide-svelte';
-	import logo from '$lib/assets/logo.png';
+	import logoStylized from '$lib/assets/logo_stylized@4x.png';
+	import cardHalf from '$lib/assets/card_half.png';
 	import { authClient } from '$lib/auth-client';
 	import DarkToggle from '$lib/components/DarkToggle.svelte';
+	import Toaster from '$lib/components/Toaster.svelte';
 
 	let { data, children } = $props();
 
@@ -12,6 +14,19 @@
 
 	afterNavigate(() => {
 		mobileOpen = false;
+	});
+
+	// Smooth fade between route changes via the View Transitions API. No-op on
+	// browsers that don't support it (Firefox today) — they just navigate as
+	// normal.
+	onNavigate((nav) => {
+		if (typeof document === 'undefined' || !document.startViewTransition) return;
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await nav.complete;
+			});
+		});
 	});
 
 	async function handleSignOut() {
@@ -26,7 +41,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" type="image/png" href={logo} />
+	<link rel="icon" type="image/png" href={logoStylized} />
 	<title>Skatstatistik</title>
 </svelte:head>
 
@@ -34,7 +49,7 @@
 	<header class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
 		<nav class="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3 text-sm">
 			<a href="/" class="flex items-center gap-2 font-semibold">
-				<img src={logo} alt="" class="size-7 rounded md:hidden" />
+				<img src={logoStylized} alt="" class="size-7" />
 				Skatstatistik
 			</a>
 
@@ -150,12 +165,12 @@
 		{/if}
 	</header>
 
-	<main class="mx-auto max-w-5xl px-4 py-6">
-		<img
-			src={logo}
-			alt="Skatstatistik"
-			class="float-right ml-4 hidden size-[100px] rounded md:block"
-		/>
+	<main class="mx-auto max-w-5xl px-4 pt-6">
 		{@render children()}
+		<footer class="mt-12 flex justify-center">
+			<img src={cardHalf} alt="" class="block max-w-xs opacity-80" />
+		</footer>
 	</main>
+
+	<Toaster />
 </div>

@@ -227,6 +227,45 @@ export async function playerLatestYear(playerId: string): Promise<number | null>
 	return rows[0]?.y ?? null;
 }
 
+export async function playerStreaks(
+	playerId: string
+): Promise<{ current: number; longest: number }> {
+	const rows = await db.execute<{ played: boolean }>(
+		sql`select e.player_id is not null as played
+		    from spieltage s
+		    left join ergebnisse e on e.datum = s.datum and e.player_id = ${playerId}
+		    order by s.datum`
+	);
+	let longest = 0;
+	let run = 0;
+	for (const r of rows) {
+		if (r.played) {
+			run++;
+			if (run > longest) longest = run;
+		} else {
+			run = 0;
+		}
+	}
+	let current = 0;
+	for (let i = rows.length - 1; i >= 0; i--) {
+		if (rows[i].played) current++;
+		else break;
+	}
+	return { current, longest };
+}
+
+export async function playerMonthlyHistory(playerId: string) {
+	return db.execute<{ month: string; bommel: number; runden: number }>(
+		sql`select to_char(date_trunc('month', datum), 'YYYY-MM') as month,
+		           sum(bommel)::int as bommel,
+		           sum(runden)::int as runden
+		    from ergebnisse
+		    where player_id = ${playerId}
+		    group by date_trunc('month', datum)
+		    order by month`
+	);
+}
+
 export async function playerCalendar(playerId: string, from?: string, to?: string) {
 	// Every Spieltag in the date range, with this player's runden if they were
 	// there (NULL if they weren't). The calendar respects the date filter only;
@@ -244,6 +283,214 @@ export async function playerCalendar(playerId: string, from?: string, to?: strin
 
 // Used by the activity calendar on the Statistik page. Each row is one Spieltag
 // with the day's total runden — drives the colour scale.
+// Per-player rolling Bommel/Runde over a sliding window of `windowRounds`
+// rounds. Each spieltag in the player's history yields one point: the
+// fraction of bommel/runden in the window ending at that date.
+//
+// Drives:
+//   • the inline Sparkline on the Statistik table (values only),
+//   • the line chart on /spieler/[kuerzel] (datum + value).
+export async function rollingBpr(
+	windowRounds = 30
+): Promise<Map<string, { datum: string; bpr: number }[]>> {
+	const rows = await db.execute<{
+		player_id: string;
+		datum: string;
+		bommel: number;
+		runden: number;
+	}>(
+		sql`select player_id, datum::text as datum, bommel, runden
+		    from ergebnisse
+		    order by player_id, datum`
+	);
+	const out = new Map<string, { datum: string; bpr: number }[]>();
+	let curr: string | null = null;
+	let buf: { b: number; r: number }[] = [];
+	let wB = 0;
+	let wR = 0;
+	for (const row of rows) {
+		if (row.player_id !== curr) {
+			curr = row.player_id;
+			buf = [];
+			wB = 0;
+			wR = 0;
+			out.set(curr, []);
+		}
+		buf.push({ b: row.bommel, r: row.runden });
+		wB += row.bommel;
+		wR += row.runden;
+		// Shrink window from the front while dropping the oldest still leaves at
+		// least `windowRounds` runden in the window. After the loop the window
+		// contains the most recent ~windowRounds rounds.
+		while (buf.length > 1 && wR - buf[0].r >= windowRounds) {
+			const oldest = buf.shift()!;
+			wB -= oldest.b;
+			wR -= oldest.r;
+		}
+		// Only emit a point once the player has accumulated at least
+		// `windowRounds` rounds. Earlier samples are too noisy to be a
+		// meaningful "rolling 30-round mean".
+		if (wR >= windowRounds) {
+			out.get(curr)!.push({ datum: row.datum, bpr: wB / wR });
+		}
+	}
+	return out;
+}
+
+// Recent-window trend for Bommel/Runde and Gewinnrate. For each player, walks
+// ergebnisse from newest to oldest, accumulates rounds into a "current" window
+// until at least `windowRounds` are reached, then accumulates the next
+// `windowRounds` into a "previous" window. Used on Statistik Gesamt where a
+// year-over-year comparison doesn't apply but we still want a directional
+// signal ("how is this player doing recently?").
+export async function recentRoundsTrend(
+	windowRounds = 50
+): Promise<
+	Map<
+		string,
+		{
+			bpr_curr: number | null;
+			bpr_prev: number | null;
+			gewinn_curr: number | null;
+			gewinn_prev: number | null;
+		}
+	>
+> {
+	const rows = await db.execute<{
+		player_id: string;
+		bommel: number;
+		runden: number;
+	}>(
+		sql`select player_id, bommel, runden
+		    from ergebnisse
+		    order by player_id, datum desc`
+	);
+	const out = new Map<
+		string,
+		{
+			bpr_curr: number | null;
+			bpr_prev: number | null;
+			gewinn_curr: number | null;
+			gewinn_prev: number | null;
+		}
+	>();
+	let curr: string | null = null;
+	let cR = 0;
+	let cB = 0;
+	let pR = 0;
+	let pB = 0;
+	let phase: 0 | 1 | 2 = 0;
+
+	const flush = (pid: string) => {
+		const cFull = cR >= windowRounds;
+		const pFull = pR >= windowRounds;
+		out.set(pid, {
+			bpr_curr: cFull ? cB / cR : null,
+			bpr_prev: pFull ? pB / pR : null,
+			gewinn_curr: cFull ? (cR - cB) / cR : null,
+			gewinn_prev: pFull ? (pR - pB) / pR : null
+		});
+	};
+
+	for (const row of rows) {
+		if (row.player_id !== curr) {
+			if (curr !== null) flush(curr);
+			curr = row.player_id;
+			cR = cB = pR = pB = 0;
+			phase = 0;
+		}
+		if (phase === 2) continue;
+		if (phase === 0) {
+			cR += row.runden;
+			cB += row.bommel;
+			if (cR >= windowRounds) phase = 1;
+		} else {
+			pR += row.runden;
+			pB += row.bommel;
+			if (pR >= windowRounds) phase = 2;
+		}
+	}
+	if (curr !== null) flush(curr);
+	return out;
+}
+
+// Recent-window Anwesenheit trend. Takes the latest `windowSpieltage` actual
+// spieltage and the `windowSpieltage` before that as the prior window. For
+// each player, anwesenheit = (# of those spieltage they appeared in) / window
+// size. Used alongside recentRoundsTrend on Statistik Gesamt.
+export async function recentSpieltageTrend(
+	windowSpieltage = 16
+): Promise<
+	Map<string, { anwesenheit_curr: number | null; anwesenheit_prev: number | null }>
+> {
+	const dates = await db.execute<{ datum: string }>(
+		sql`select datum::text as datum from spieltage
+		    order by datum desc
+		    limit ${windowSpieltage * 2}`
+	);
+	const out = new Map<
+		string,
+		{ anwesenheit_curr: number | null; anwesenheit_prev: number | null }
+	>();
+	if (dates.length === 0) return out;
+	const currDates = dates.slice(0, windowSpieltage).map((r) => r.datum);
+	const prevDates = dates.slice(windowSpieltage, windowSpieltage * 2).map((r) => r.datum);
+	const currFrom = currDates[currDates.length - 1];
+	const currTo = currDates[0];
+	const havePrev = prevDates.length === windowSpieltage;
+	const prevFrom = havePrev ? prevDates[prevDates.length - 1] : null;
+	const prevTo = havePrev ? prevDates[0] : null;
+	const rangeFrom = prevFrom ?? currFrom;
+	const rangeTo = currTo;
+
+	const rows = await db.execute<{
+		player_id: string;
+		curr_count: number;
+		prev_count: number;
+	}>(
+		sql`select
+		      player_id,
+		      count(*) filter (where datum between ${currFrom} and ${currTo})::int as curr_count,
+		      count(*) filter (where ${havePrev ? sql`datum between ${prevFrom} and ${prevTo}` : sql`false`})::int as prev_count
+		    from ergebnisse
+		    where datum between ${rangeFrom} and ${rangeTo}
+		    group by player_id`
+	);
+	for (const r of rows) {
+		out.set(r.player_id, {
+			anwesenheit_curr: Number(r.curr_count) / windowSpieltage,
+			anwesenheit_prev: havePrev ? Number(r.prev_count) / windowSpieltage : null
+		});
+	}
+	return out;
+}
+
+// LEGACY — kept for symmetry with the old per-year sparkline. Unused after the
+// rolling-window refactor; safe to delete in a follow-up.
+export async function bommelPerRundeByPlayerByYear(): Promise<Map<string, (number | null)[]>> {
+	const rows = await db.execute<{ player_id: string; year: number; bpr: number | null }>(
+		sql`select player_id,
+		           year,
+		           bommel_per_runde::float8 as bpr
+		    from player_stats_by_year
+		    order by player_id, year`
+	);
+	const out = new Map<string, (number | null)[]>();
+	const yearsSeen = new Set<number>();
+	for (const r of rows) yearsSeen.add(r.year);
+	const sortedYears = [...yearsSeen].sort((a, b) => a - b);
+	const yearIdx = new Map(sortedYears.map((y, i) => [y, i]));
+	for (const r of rows) {
+		if (!out.has(r.player_id)) {
+			out.set(r.player_id, new Array<number | null>(sortedYears.length).fill(null));
+		}
+		const arr = out.get(r.player_id)!;
+		const idx = yearIdx.get(r.year);
+		if (idx !== undefined) arr[idx] = r.bpr ?? null;
+	}
+	return out;
+}
+
 export async function spieltageWithTotals(year?: number) {
 	return db.execute<{ datum: string; runden: number }>(
 		sql`select s.datum::text as datum,
@@ -439,6 +686,42 @@ export async function statsByYear(
 		    where year = ${year}
 		    order by ${sortFrag} ${dirFrag} nulls last, kuerzel asc`
 	);
+}
+
+// Same shape as statsByYear but for an arbitrary date range. Used to compute
+// year-over-year trends fairly: the current year may be partial (e.g. May), so
+// we compare against the same partial slice of the previous year, not its
+// full 12 months.
+export async function statsForRange(fromIso: string, toIso: string) {
+	return db.execute<StatsRow>(
+		sql`select
+		      ${0}::int                                                                          as year,
+		      p.id                                                                              as player_id,
+		      p.kuerzel,
+		      p.name,
+		      count(distinct e.datum)::int                                                      as spieltage,
+		      sum(e.runden)::int                                                                as runden,
+		      sum(e.bommel)::int                                                                as bommel,
+		      sum(e.bommel)::numeric / nullif(sum(e.runden), 0)                                 as bommel_per_runde,
+		      (sum(e.runden) - sum(e.bommel))::numeric / nullif(sum(e.runden), 0)               as gewinnrate,
+		      count(distinct e.datum)::numeric / nullif(
+		        (select count(*)::numeric from spieltage where datum between ${fromIso} and ${toIso}), 0
+		      )                                                                                 as anwesenheit
+		    from ergebnisse e
+		    join players p on p.id = e.player_id
+		    where e.datum between ${fromIso} and ${toIso}
+		    group by p.id, p.kuerzel, p.name`
+	);
+}
+
+// Latest spieltag in a given year (or null if no data). Used to decide where
+// the YTD cutoff is for trend comparisons.
+export async function maxDatumInYear(year: number): Promise<string | null> {
+	const rows = await db.execute<{ d: string | null }>(
+		sql`select max(datum)::text as d from spieltage
+		    where extract(year from datum)::int = ${year}`
+	);
+	return rows[0]?.d ?? null;
 }
 
 export async function statsAllTime(
