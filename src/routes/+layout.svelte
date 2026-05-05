@@ -16,6 +16,7 @@
 		<nav class="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
 			<a href="/" class="font-semibold">Skatstatistik</a>
 			<a href="/spieltage" class="hover:underline">Spieltage</a>
+			<a href="/runden" class="hover:underline">Runden</a>
 			<a href="/spieler" class="hover:underline">Spieler</a>
 			<div class="ml-auto">
 				<DarkToggle />

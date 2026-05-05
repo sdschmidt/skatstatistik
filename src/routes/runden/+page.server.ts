@@ -1,4 +1,4 @@
-import { listSpieltage, spieltageBounds, type SpieltageFilters } from '$server/queries';
+import { ergebnisseBounds, listErgebnisse, type ErgebnisseFilters } from '$server/queries';
 import type { PageServerLoad } from './$types';
 
 function intParam(v: string | null): number | undefined {
@@ -13,15 +13,13 @@ function dateParam(v: string | null): string | undefined {
 export const load: PageServerLoad = async ({ url }) => {
 	const p = url.searchParams;
 	const sortRaw = p.get('sort');
-	const sort: SpieltageFilters['sort'] =
-		sortRaw === 'players' || sortRaw === 'runden' || sortRaw === 'bommel' ? sortRaw : 'date';
-	const dir: SpieltageFilters['dir'] = p.get('dir') === 'asc' ? 'asc' : 'desc';
+	const sort: ErgebnisseFilters['sort'] =
+		sortRaw === 'kuerzel' || sortRaw === 'bommel' || sortRaw === 'runden' ? sortRaw : 'date';
+	const dir: ErgebnisseFilters['dir'] = p.get('dir') === 'asc' ? 'asc' : 'desc';
 
-	const filters: SpieltageFilters = {
+	const filters: ErgebnisseFilters = {
 		from: dateParam(p.get('from')),
 		to: dateParam(p.get('to')),
-		minPlayers: intParam(p.get('minPlayers')),
-		maxPlayers: intParam(p.get('maxPlayers')),
 		minRunden: intParam(p.get('minRunden')),
 		maxRunden: intParam(p.get('maxRunden')),
 		minBommel: intParam(p.get('minBommel')),
@@ -30,6 +28,6 @@ export const load: PageServerLoad = async ({ url }) => {
 		dir
 	};
 
-	const [rows, bounds] = await Promise.all([listSpieltage(filters), spieltageBounds()]);
-	return { spieltage: rows, filters, bounds };
+	const [rows, bounds] = await Promise.all([listErgebnisse(filters), ergebnisseBounds()]);
+	return { ergebnisse: rows, filters, bounds };
 };

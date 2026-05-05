@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from './db';
 import { ergebnisse, players, spieltage } from './schema';
 
-export type SpieltageSort = 'date' | 'players' | 'runden';
+export type SpieltageSort = 'date' | 'players' | 'runden' | 'bommel';
 export type SpieltageDir = 'asc' | 'desc';
 
 export type SpieltageFilters = {
@@ -12,6 +12,8 @@ export type SpieltageFilters = {
 	maxPlayers?: number;
 	minRunden?: number;
 	maxRunden?: number;
+	minBommel?: number;
+	maxBommel?: number;
 	sort?: SpieltageSort;
 	dir?: SpieltageDir;
 };
@@ -19,6 +21,7 @@ export type SpieltageFilters = {
 export async function listSpieltage(f: SpieltageFilters = {}) {
 	const playerCountExpr = sql<number>`count(distinct ${ergebnisse.playerId})::int`;
 	const rundenExpr = sql<number>`coalesce(sum(${ergebnisse.runden}), 0)::int`;
+	const bommelExpr = sql<number>`coalesce(sum(${ergebnisse.bommel}), 0)::int`;
 
 	const where = and(
 		f.from ? gte(spieltage.datum, f.from) : undefined,
@@ -36,6 +39,12 @@ export async function listSpieltage(f: SpieltageFilters = {}) {
 			: undefined,
 		f.maxRunden !== undefined
 			? sql`coalesce(sum(${ergebnisse.runden}), 0) <= ${f.maxRunden}`
+			: undefined,
+		f.minBommel !== undefined
+			? sql`coalesce(sum(${ergebnisse.bommel}), 0) >= ${f.minBommel}`
+			: undefined,
+		f.maxBommel !== undefined
+			? sql`coalesce(sum(${ergebnisse.bommel}), 0) <= ${f.maxBommel}`
 			: undefined
 	);
 
@@ -45,7 +54,9 @@ export async function listSpieltage(f: SpieltageFilters = {}) {
 			? [dirFn(playerCountExpr), desc(spieltage.datum)]
 			: f.sort === 'runden'
 				? [dirFn(rundenExpr), desc(spieltage.datum)]
-				: [dirFn(spieltage.datum)];
+				: f.sort === 'bommel'
+					? [dirFn(bommelExpr), desc(spieltage.datum)]
+					: [dirFn(spieltage.datum)];
 
 	return db
 		.select({
@@ -53,7 +64,8 @@ export async function listSpieltage(f: SpieltageFilters = {}) {
 			photoPath: spieltage.photoPath,
 			notes: spieltage.notes,
 			playerCount: playerCountExpr,
-			runden: rundenExpr
+			runden: rundenExpr,
+			bommel: bommelExpr
 		})
 		.from(spieltage)
 		.leftJoin(ergebnisse, eq(ergebnisse.datum, spieltage.datum))
@@ -61,6 +73,98 @@ export async function listSpieltage(f: SpieltageFilters = {}) {
 		.groupBy(spieltage.datum, spieltage.photoPath, spieltage.notes)
 		.having(having)
 		.orderBy(...orderBy);
+}
+
+export async function spieltageBounds() {
+	const rows = await db.execute<{
+		max_players: number;
+		max_runden: number;
+		max_bommel: number;
+		min_date: string | null;
+		max_date: string | null;
+	}>(sql`
+		select
+			coalesce(max(player_count), 0)::int as max_players,
+			coalesce(max(runden_sum),  0)::int as max_runden,
+			coalesce(max(bommel_sum),  0)::int as max_bommel,
+			(select min(datum)::text from spieltage) as min_date,
+			(select max(datum)::text from spieltage) as max_date
+		from (
+			select count(distinct player_id) as player_count,
+			       coalesce(sum(runden), 0) as runden_sum,
+			       coalesce(sum(bommel), 0) as bommel_sum
+			from ergebnisse
+			group by datum
+		) x
+	`);
+	return rows[0] ?? { max_players: 0, max_runden: 0, max_bommel: 0, min_date: null, max_date: null };
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// /runden — one row per ergebnis
+// ──────────────────────────────────────────────────────────────────────
+
+export type ErgebnisseSort = 'date' | 'kuerzel' | 'bommel' | 'runden';
+
+export type ErgebnisseFilters = {
+	from?: string;
+	to?: string;
+	minRunden?: number;
+	maxRunden?: number;
+	minBommel?: number;
+	maxBommel?: number;
+	sort?: ErgebnisseSort;
+	dir?: 'asc' | 'desc';
+};
+
+export async function listErgebnisse(f: ErgebnisseFilters = {}) {
+	const where = and(
+		f.from ? gte(ergebnisse.datum, f.from) : undefined,
+		f.to ? lte(ergebnisse.datum, f.to) : undefined,
+		f.minBommel !== undefined ? gte(ergebnisse.bommel, f.minBommel) : undefined,
+		f.maxBommel !== undefined ? lte(ergebnisse.bommel, f.maxBommel) : undefined,
+		f.minRunden !== undefined ? gte(ergebnisse.runden, f.minRunden) : undefined,
+		f.maxRunden !== undefined ? lte(ergebnisse.runden, f.maxRunden) : undefined
+	);
+
+	const dirFn = f.dir === 'asc' ? asc : desc;
+	const orderBy: SQL[] =
+		f.sort === 'kuerzel'
+			? [dirFn(players.kuerzel), desc(ergebnisse.datum)]
+			: f.sort === 'bommel'
+				? [dirFn(ergebnisse.bommel), desc(ergebnisse.datum), asc(players.kuerzel)]
+				: f.sort === 'runden'
+					? [dirFn(ergebnisse.runden), desc(ergebnisse.datum), asc(players.kuerzel)]
+					: [dirFn(ergebnisse.datum), asc(players.kuerzel)];
+
+	return db
+		.select({
+			datum: ergebnisse.datum,
+			kuerzel: players.kuerzel,
+			name: players.name,
+			bommel: ergebnisse.bommel,
+			runden: ergebnisse.runden
+		})
+		.from(ergebnisse)
+		.innerJoin(players, eq(players.id, ergebnisse.playerId))
+		.where(where)
+		.orderBy(...orderBy);
+}
+
+export async function ergebnisseBounds() {
+	const rows = await db.execute<{
+		max_runden: number;
+		max_bommel: number;
+		min_date: string | null;
+		max_date: string | null;
+	}>(sql`
+		select coalesce(max(runden), 0)::int as max_runden,
+		       coalesce(max(bommel), 0)::int as max_bommel,
+		       (select min(datum)::text from spieltage) as min_date,
+		       (select max(datum)::text from spieltage) as max_date
+		from ergebnisse
+	`);
+	return rows[0] ?? { max_runden: 0, max_bommel: 0, min_date: null, max_date: null };
 }
 
 export async function getSpieltag(datum: string) {
