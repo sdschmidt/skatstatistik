@@ -114,7 +114,7 @@
 </div>
 
 <!-- stats strip -->
-<dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+<dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
 	<div class="rounded border border-gray-200 p-3 dark:border-gray-700">
 		<dt class="text-xs text-gray-500">Spieltage</dt>
 		<dd class="mt-1 text-lg font-semibold tabular-nums">{summary.spieltage}</dd>
@@ -122,6 +122,10 @@
 	<div class="rounded border border-gray-200 p-3 dark:border-gray-700">
 		<dt class="text-xs text-gray-500">Runden</dt>
 		<dd class="mt-1 text-lg font-semibold tabular-nums">{summary.runden}</dd>
+	</div>
+	<div class="rounded border border-gray-200 p-3 dark:border-gray-700">
+		<dt class="text-xs text-gray-500">Bommel</dt>
+		<dd class="mt-1 text-lg font-semibold tabular-nums">{summary.bommel}</dd>
 	</div>
 	<div class="rounded border border-gray-200 p-3 dark:border-gray-700">
 		<dt class="text-xs text-gray-500">Bommel/R.</dt>
