@@ -191,7 +191,10 @@
 						</a>
 					</td>
 					<td>
-						<a class="font-mono underline" href="/spieler/{encodeURIComponent(e.kuerzel)}">
+						<a
+							class="font-mono hover:underline"
+							href="/spieler/{encodeURIComponent(e.kuerzel)}"
+						>
 							{e.kuerzel}
 						</a>
 					</td>

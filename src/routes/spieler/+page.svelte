@@ -52,7 +52,7 @@
 		<div class="contents border-b border-gray-100 dark:border-gray-800">
 			<a
 				href="/spieler/{encodeURIComponent(p.kuerzel)}"
-				class="border-b border-gray-100 py-2 font-mono underline dark:border-gray-800"
+				class="border-b border-gray-100 py-2 font-mono hover:underline dark:border-gray-800"
 			>
 				{p.kuerzel}
 			</a>

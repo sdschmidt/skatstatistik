@@ -151,7 +151,10 @@
 				{#each stats as s (s.player_id)}
 					<tr class="border-b border-gray-100 dark:border-gray-800">
 						<td class="py-1">
-							<a class="font-mono underline" href="/spieler/{encodeURIComponent(s.kuerzel)}">
+							<a
+								class="font-mono hover:underline"
+								href="/spieler/{encodeURIComponent(s.kuerzel)}"
+							>
 								{s.kuerzel}
 							</a>
 						</td>
