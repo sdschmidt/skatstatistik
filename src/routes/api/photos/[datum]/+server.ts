@@ -12,8 +12,11 @@ export const GET: RequestHandler = async ({ params }) => {
 		.where(eq(spieltage.datum, params.datum));
 	if (!s?.photoPath) error(404);
 
-	const { buffer, type } = await loadPhoto(s.photoPath);
-	return new Response(new Blob([new Uint8Array(buffer)], { type }), {
+	const photo = await loadPhoto(s.photoPath);
+	// DB row references a file that's not on disk — treat as 404, not 500.
+	if (!photo) error(404);
+
+	return new Response(new Blob([new Uint8Array(photo.buffer)], { type: photo.type }), {
 		headers: { 'Cache-Control': 'private, max-age=300' }
 	});
 };

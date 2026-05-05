@@ -24,8 +24,16 @@ export async function savePhoto(datum: string, file: File): Promise<string> {
 	return filename;
 }
 
-export async function loadPhoto(filename: string): Promise<{ buffer: Buffer; type: string }> {
-	const buffer = await readFile(join(dir(), filename));
+export async function loadPhoto(
+	filename: string
+): Promise<{ buffer: Buffer; type: string } | null> {
+	let buffer: Buffer;
+	try {
+		buffer = await readFile(join(dir(), filename));
+	} catch (e) {
+		if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+		throw e;
+	}
 	const ext = extname(filename).toLowerCase();
 	const type =
 		ext === '.png'
