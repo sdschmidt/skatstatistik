@@ -6,16 +6,16 @@ import { db } from './db';
 import { account, session, user, verification } from './schema';
 import { sendMail } from './mail';
 
-type AuthInstance = ReturnType<typeof betterAuth>;
-
 // Build the auth instance lazily: env vars (BETTER_AUTH_SECRET in particular)
 // aren't available during SvelteKit's build/analyse step (the Docker image
 // doesn't ship .env), and better-auth throws at construction time when the
 // secret is missing. Defer until first request — process.env is populated by
 // then and the secret/baseURL/etc. are read correctly.
+type AuthInstance = ReturnType<typeof build>;
+
 let _auth: AuthInstance | undefined;
 
-function build(): AuthInstance {
+function build() {
 	return betterAuth({
 		database: drizzleAdapter(db, {
 			provider: 'pg',
