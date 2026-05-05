@@ -9,7 +9,7 @@
 
 	async function handleSignOut() {
 		await authClient.signOut();
-		await goto('/auth');
+		await goto('/');
 	}
 </script>
 
@@ -25,19 +25,25 @@
 				<img src={logo} alt="" class="size-7 rounded" />
 				Skatstatistik
 			</a>
-			{#if data.user && data.user.role !== 'pending'}
-				<a href="/spieltage" class="hover:underline">Spieltage</a>
-				<a href="/runden" class="hover:underline">Runden</a>
-				<a href="/spieler" class="hover:underline">Spieler</a>
-				{#if data.user.role === 'admin'}
-					<a href="/admin/users" class="hover:underline">Benutzer</a>
-				{/if}
+			<a href="/spieltage" class="hover:underline">Spieltage</a>
+			<a href="/runden" class="hover:underline">Runden</a>
+			<a href="/spieler" class="hover:underline">Spieler</a>
+			{#if data.user?.role === 'admin'}
+				<a href="/admin/users" class="hover:underline">Benutzer</a>
 			{/if}
 			<div class="ml-auto flex items-center gap-2">
 				{#if data.user}
 					<span class="hidden text-xs text-gray-500 sm:inline dark:text-gray-400">
 						{data.user.name || data.user.email}
 					</span>
+					{#if data.user.role === 'pending'}
+						<a
+							href="/auth/pending"
+							class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950"
+						>
+							gesperrt
+						</a>
+					{/if}
 					<button
 						type="button"
 						onclick={handleSignOut}
@@ -45,6 +51,13 @@
 					>
 						Abmelden
 					</button>
+				{:else}
+					<a
+						href="/auth"
+						class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+					>
+						Anmelden
+					</a>
 				{/if}
 				<DarkToggle />
 			</div>

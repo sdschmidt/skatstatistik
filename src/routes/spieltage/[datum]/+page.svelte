@@ -6,20 +6,23 @@
 	const totalRunden = $derived(spieltag.ergebnisse.reduce((s, e) => s + e.runden, 0));
 	const totalBommel = $derived(spieltag.ergebnisse.reduce((s, e) => s + e.bommel, 0));
 	const isAdmin = $derived(page.data.user?.role === 'admin');
+	const canWrite = $derived(page.data.user && page.data.user.role !== 'pending');
 </script>
 
 <div class="flex items-center justify-between gap-4">
 	<h1 class="text-2xl font-semibold">
 		Spieltag <span class="font-mono">{formatDate(spieltag.datum)}</span>
 	</h1>
-	{#if isAdmin}
-		<div class="flex items-center gap-2 text-sm">
+	<div class="flex items-center gap-2 text-sm">
+		{#if canWrite}
 			<a
 				href="/spieltage/{spieltag.datum}/edit"
 				class="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
 			>
 				Bearbeiten
 			</a>
+		{/if}
+		{#if isAdmin}
 			<form
 				method="POST"
 				action="?/delete"
@@ -32,8 +35,8 @@
 					Löschen
 				</button>
 			</form>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </div>
 
 {#if spieltag.photoPath}

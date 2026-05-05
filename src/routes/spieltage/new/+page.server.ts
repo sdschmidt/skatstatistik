@@ -1,9 +1,11 @@
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { listPlayers } from '$server/queries';
 import { handleSpieltagSubmit } from '$server/spieltagAction';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals, url }) => {
+	if (!locals.user) redirect(303, '/auth?next=' + encodeURIComponent(url.pathname));
+	if (locals.user.role === 'pending') redirect(303, '/spieltage');
 	const players = await listPlayers();
 	return {
 		allPlayers: players.map((p) => ({ kuerzel: p.kuerzel, name: p.name }))

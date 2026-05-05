@@ -109,6 +109,7 @@
 	{/if}
 
 	<p class="text-center text-xs text-gray-500 dark:text-gray-400">
-		Neue Konten müssen von einem Admin freigegeben werden.
+		Lesezugriff ist offen. Anmelden brauchst du nur, um Spieltage und Spieler hinzuzufügen
+		oder zu bearbeiten.
 	</p>
 </div>

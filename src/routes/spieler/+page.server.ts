@@ -19,12 +19,14 @@ export const actions: Actions = {
 		const name = String(data.get('name') ?? '').trim() || null;
 		if (!kuerzel) return fail(400, { error: 'Kürzel darf nicht leer sein.', kuerzel, name });
 		const id = await ensurePlayer(kuerzel);
-		if (name && locals.user.role === 'admin') await renamePlayer(id, name);
+		if (name) await renamePlayer(id, name);
 		return { ok: true };
 	},
 
 	rename: async ({ request, locals }) => {
-		if (locals.user?.role !== 'admin') return fail(403, { error: 'Nur Admins.' });
+		if (!locals.user || locals.user.role === 'pending') {
+			return fail(403, { error: 'Nicht angemeldet.' });
+		}
 		const data = await request.formData();
 		const id = String(data.get('id') ?? '');
 		const name = String(data.get('name') ?? '').trim() || null;

@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	let { data, form } = $props();
-	const isAdmin = $derived(page.data.user?.role === 'admin');
+	const canWrite = $derived(page.data.user && page.data.user.role !== 'pending');
 </script>
 
 <div class="flex items-center justify-between">
@@ -10,24 +10,24 @@
 	<span class="text-xs text-gray-500">{data.players.length} Spieler</span>
 </div>
 
-<section class="mt-4 rounded border border-gray-200 p-3 dark:border-gray-700">
-	<h2 class="text-sm font-medium">Neuen Spieler anlegen</h2>
-	<form
-		method="POST"
-		action="?/add"
-		use:enhance
-		class="mt-2 flex flex-wrap items-end gap-2 text-sm"
-	>
-		<label class="flex flex-col">
-			<span class="text-xs text-gray-500">Kürzel *</span>
-			<input
-				name="kuerzel"
-				required
-				autocomplete="off"
-				class="w-32 rounded border border-gray-300 p-1 uppercase dark:border-gray-700 dark:bg-gray-800"
-			/>
-		</label>
-		{#if isAdmin}
+{#if canWrite}
+	<section class="mt-4 rounded border border-gray-200 p-3 dark:border-gray-700">
+		<h2 class="text-sm font-medium">Neuen Spieler anlegen</h2>
+		<form
+			method="POST"
+			action="?/add"
+			use:enhance
+			class="mt-2 flex flex-wrap items-end gap-2 text-sm"
+		>
+			<label class="flex flex-col">
+				<span class="text-xs text-gray-500">Kürzel *</span>
+				<input
+					name="kuerzel"
+					required
+					autocomplete="off"
+					class="w-32 rounded border border-gray-300 p-1 uppercase dark:border-gray-700 dark:bg-gray-800"
+				/>
+			</label>
 			<label class="flex flex-col">
 				<span class="text-xs text-gray-500">Name</span>
 				<input
@@ -35,15 +35,15 @@
 					class="w-64 rounded border border-gray-300 p-1 dark:border-gray-700 dark:bg-gray-800"
 				/>
 			</label>
+			<button class="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700">
+				Hinzufügen
+			</button>
+		</form>
+		{#if form && 'error' in form && form.error}
+			<p class="mt-2 text-sm text-red-600">{form.error}</p>
 		{/if}
-		<button class="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700">
-			Hinzufügen
-		</button>
-	</form>
-	{#if form && 'error' in form && form.error}
-		<p class="mt-2 text-sm text-red-600">{form.error}</p>
-	{/if}
-</section>
+	</section>
+{/if}
 
 <div class="mt-6 grid grid-cols-[max-content_1fr_max-content] items-center gap-x-3 text-sm">
 	<div class="contents text-xs font-medium text-gray-500">
@@ -60,7 +60,7 @@
 			>
 				{p.kuerzel}
 			</a>
-			{#if isAdmin}
+			{#if canWrite}
 				<form
 					method="POST"
 					action="?/rename"

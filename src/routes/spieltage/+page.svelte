@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
 	import RangeSlider from '$lib/components/RangeSlider.svelte';
 	import { formatDate } from '$lib/format';
@@ -7,6 +8,9 @@
 	let { data } = $props();
 	const filters = $derived(data.filters);
 	const bounds = $derived(data.bounds);
+	const canWrite = $derived(
+		page.data.user && page.data.user.role !== 'pending'
+	);
 
 	function pushUrl(params: Record<string, string | number | undefined>) {
 		const merged: Record<string, string | number | undefined> = {
@@ -105,12 +109,14 @@
 
 <div class="flex items-center justify-between">
 	<h1 class="text-2xl font-semibold">Spieltage</h1>
-	<a
-		href="/spieltage/new"
-		class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-	>
-		+ Neuer Spieltag
-	</a>
+	{#if canWrite}
+		<a
+			href="/spieltage/new"
+			class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
+		>
+			+ Neuer Spieltag
+		</a>
+	{/if}
 </div>
 
 <div class="mt-4 rounded border border-gray-200 p-4 text-sm dark:border-gray-700">

@@ -3,8 +3,9 @@ import { getSpieltag, listPlayers } from '$server/queries';
 import { handleSpieltagSubmit } from '$server/spieltagAction';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
-	if (locals.user?.role !== 'admin') redirect(303, `/spieltage/${params.datum}`);
+export const load: PageServerLoad = async ({ params, locals, url }) => {
+	if (!locals.user) redirect(303, '/auth?next=' + encodeURIComponent(url.pathname));
+	if (locals.user.role === 'pending') redirect(303, `/spieltage/${params.datum}`);
 	const spieltag = await getSpieltag(params.datum);
 	if (!spieltag) error(404, 'Spieltag nicht gefunden');
 	const players = await listPlayers();
@@ -16,7 +17,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 export const actions: Actions = {
 	default: async ({ request, params, locals }) => {
-		if (locals.user?.role !== 'admin') return fail(403, { error: 'Nur Admins.' });
+		if (!locals.user || locals.user.role === 'pending') {
+			return fail(403, { error: 'Nicht angemeldet.' });
+		}
 		return handleSpieltagSubmit(await request.formData(), params.datum);
 	}
 };
