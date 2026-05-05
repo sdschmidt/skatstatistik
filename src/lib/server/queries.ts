@@ -113,6 +113,7 @@ export type ErgebnisseFilters = {
 	maxRunden?: number;
 	minBommel?: number;
 	maxBommel?: number;
+	playerId?: string;
 	sort?: ErgebnisseSort;
 	dir?: 'asc' | 'desc';
 };
@@ -124,7 +125,8 @@ export async function listErgebnisse(f: ErgebnisseFilters = {}) {
 		f.minBommel !== undefined ? gte(ergebnisse.bommel, f.minBommel) : undefined,
 		f.maxBommel !== undefined ? lte(ergebnisse.bommel, f.maxBommel) : undefined,
 		f.minRunden !== undefined ? gte(ergebnisse.runden, f.minRunden) : undefined,
-		f.maxRunden !== undefined ? lte(ergebnisse.runden, f.maxRunden) : undefined
+		f.maxRunden !== undefined ? lte(ergebnisse.runden, f.maxRunden) : undefined,
+		f.playerId ? eq(ergebnisse.playerId, f.playerId) : undefined
 	);
 
 	const dirFn = f.dir === 'asc' ? asc : desc;
@@ -149,6 +151,87 @@ export async function listErgebnisse(f: ErgebnisseFilters = {}) {
 		.innerJoin(players, eq(players.id, ergebnisse.playerId))
 		.where(where)
 		.orderBy(...orderBy);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Per-player page (/spieler/[kuerzel])
+// ──────────────────────────────────────────────────────────────────────
+
+export async function getPlayerByKuerzel(kuerzel: string) {
+	const [row] = await db.select().from(players).where(eq(players.kuerzel, kuerzel));
+	return row ?? null;
+}
+
+export type PlayerSummaryFilters = {
+	from?: string;
+	to?: string;
+	minBommel?: number;
+	maxBommel?: number;
+	minRunden?: number;
+	maxRunden?: number;
+};
+
+export async function playerSummary(playerId: string, f: PlayerSummaryFilters) {
+	// Bommel/Runden sums respect ALL filters (date + bommel/runden ranges).
+	const aggRows = await db.execute<{ runden: number; bommel: number; spieltage_filtered: number }>(
+		sql`select
+		      coalesce(sum(runden), 0)::int     as runden,
+		      coalesce(sum(bommel), 0)::int     as bommel,
+		      count(distinct datum)::int        as spieltage_filtered
+		    from ergebnisse
+		    where player_id = ${playerId}
+		      ${f.from ? sql`and datum >= ${f.from}` : sql``}
+		      ${f.to ? sql`and datum <= ${f.to}` : sql``}
+		      ${f.minBommel !== undefined ? sql`and bommel >= ${f.minBommel}` : sql``}
+		      ${f.maxBommel !== undefined ? sql`and bommel <= ${f.maxBommel}` : sql``}
+		      ${f.minRunden !== undefined ? sql`and runden >= ${f.minRunden}` : sql``}
+		      ${f.maxRunden !== undefined ? sql`and runden <= ${f.maxRunden}` : sql``}`
+	);
+	const agg = aggRows[0] ?? { runden: 0, bommel: 0, spieltage_filtered: 0 };
+
+	// Anwesenheit uses only the DATE filter — it's about presence, not the
+	// shape of the rounds played that day.
+	const anwRows = await db.execute<{ played: number; total: number }>(
+		sql`select
+		      (select count(distinct e.datum)::int
+		         from ergebnisse e
+		         where e.player_id = ${playerId}
+		           ${f.from ? sql`and e.datum >= ${f.from}` : sql``}
+		           ${f.to ? sql`and e.datum <= ${f.to}` : sql``}
+		      ) as played,
+		      (select count(*)::int from spieltage s
+		         where 1=1
+		           ${f.from ? sql`and s.datum >= ${f.from}` : sql``}
+		           ${f.to ? sql`and s.datum <= ${f.to}` : sql``}
+		      ) as total`
+	);
+	const anw = anwRows[0] ?? { played: 0, total: 0 };
+
+	return {
+		runden: agg.runden,
+		bommel: agg.bommel,
+		spieltage: agg.spieltage_filtered,
+		bommelPerRunde: agg.runden ? agg.bommel / agg.runden : null,
+		gewinnrate: agg.runden ? (agg.runden - agg.bommel) / agg.runden : null,
+		anwesenheitNumerator: anw.played,
+		anwesenheitDenominator: anw.total,
+		anwesenheit: anw.total ? anw.played / anw.total : null
+	};
+}
+
+export async function playerCalendar(playerId: string, from?: string, to?: string) {
+	// Every Spieltag in the date range, with this player's runden if they were
+	// there (NULL if they weren't). The calendar respects the date filter only;
+	// bommel/runden range filters narrow the table below, not the activity grid.
+	return db.execute<{ datum: string; runden: number | null }>(
+		sql`select s.datum::text as datum, e.runden as runden
+		    from spieltage s
+		    left join ergebnisse e on e.datum = s.datum and e.player_id = ${playerId}
+		    where 1=1
+		      ${from ? sql`and s.datum >= ${from}` : sql``}
+		      ${to ? sql`and s.datum <= ${to}` : sql``}
+		    order by s.datum`
+	);
 }
 
 export async function ergebnisseBounds() {
