@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { afterNavigate, goto, invalidateAll } from '$app/navigation';
+	import { Menu, X } from 'lucide-svelte';
 	import logo from '$lib/assets/logo.png';
 	import { authClient } from '$lib/auth-client';
 	import DarkToggle from '$lib/components/DarkToggle.svelte';
@@ -33,7 +34,7 @@
 	<header class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
 		<nav class="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3 text-sm">
 			<a href="/" class="flex items-center gap-2 font-semibold">
-				<img src={logo} alt="" class="size-7 rounded" />
+				<img src={logo} alt="" class="size-7 rounded md:hidden" />
 				Skatstatistik
 			</a>
 
@@ -89,13 +90,9 @@
 					class="rounded p-1.5 hover:bg-gray-100 md:hidden dark:hover:bg-gray-800"
 				>
 					{#if mobileOpen}
-						<svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
-						</svg>
+						<X class="size-5" />
 					{:else}
-						<svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-						</svg>
+						<Menu class="size-5" />
 					{/if}
 				</button>
 			</div>
@@ -154,6 +151,11 @@
 	</header>
 
 	<main class="mx-auto max-w-5xl px-4 py-6">
+		<img
+			src={logo}
+			alt="Skatstatistik"
+			class="float-right ml-4 hidden size-[100px] rounded md:block"
+		/>
 		{@render children()}
 	</main>
 </div>

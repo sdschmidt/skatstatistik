@@ -9,7 +9,9 @@
 
 	type ApexInstance = {
 		render: () => Promise<unknown>;
-		updateOptions: (o: ApexOptions) => unknown;
+		// redrawPaths defaults to false in ApexCharts — colour-only diffs aren't
+		// re-rendered then. We pass true so theme switches actually take effect.
+		updateOptions: (o: ApexOptions, redrawPaths?: boolean, animate?: boolean) => unknown;
 		destroy: () => unknown;
 	};
 	let chart: ApexInstance | null = null;
@@ -62,7 +64,7 @@
 	});
 
 	$effect(() => {
-		if (chart) chart.updateOptions(applyTheme(options, isDark));
+		if (chart) chart.updateOptions(applyTheme(options, isDark), true, false);
 	});
 </script>
 

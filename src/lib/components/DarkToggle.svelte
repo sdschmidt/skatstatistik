@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Moon, Sun, SunMoon } from 'lucide-svelte';
 
 	type Theme = 'system' | 'dark' | 'light';
 
@@ -37,7 +38,7 @@
 		applyDark(isDarkFor(theme));
 	}
 
-	const icon = $derived(theme === 'dark' ? '☾' : theme === 'light' ? '☀' : '◐');
+	const Icon = $derived(theme === 'dark' ? Moon : theme === 'light' ? Sun : SunMoon);
 	const label = $derived(
 		theme === 'dark' ? 'Dunkel' : theme === 'light' ? 'Hell' : 'System'
 	);
@@ -48,7 +49,7 @@
 	onclick={cycle}
 	aria-label="Theme: {label}"
 	title="Theme: {label} (klicken zum Wechseln)"
-	class="rounded p-1.5 text-base hover:bg-gray-100 dark:hover:bg-gray-800"
+	class="rounded p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
 >
-	{icon}
+	<Icon class="size-5" />
 </button>

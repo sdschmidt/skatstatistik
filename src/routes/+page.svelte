@@ -47,7 +47,7 @@
 		xaxis: { categories: chartLabels },
 		yaxis: { labels: { formatter: (v) => `${v}%` } },
 		dataLabels: { enabled: false },
-		colors: ['#dc2626'],
+		colors: ['#1e40af'],
 		title: { text: 'Bommel pro Runde', align: 'left', style: { fontSize: '14px' } }
 	});
 
