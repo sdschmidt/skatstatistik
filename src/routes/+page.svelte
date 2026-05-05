@@ -193,12 +193,12 @@
 		</div>
 
 		<div class="mt-8 grid gap-6 lg:grid-cols-2">
-			<div class="rounded border border-gray-200 p-3 dark:border-gray-700 dark:bg-gray-900">
+			<div>
 				{#key heading}
 					<Chart options={bommelChart} />
 				{/key}
 			</div>
-			<div class="rounded border border-gray-200 p-3 dark:border-gray-700 dark:bg-gray-900">
+			<div>
 				{#key heading}
 					<Chart options={anwesenheitChart} />
 				{/key}
