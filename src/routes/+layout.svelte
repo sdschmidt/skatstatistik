@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import DarkToggle from '$lib/components/DarkToggle.svelte';
 
 	let { children } = $props();
 </script>
@@ -16,6 +17,9 @@
 			<a href="/" class="font-semibold">Skatstatistik</a>
 			<a href="/spieltage" class="hover:underline">Spieltage</a>
 			<a href="/spieler" class="hover:underline">Spieler</a>
+			<div class="ml-auto">
+				<DarkToggle />
+			</div>
 		</nav>
 	</header>
 

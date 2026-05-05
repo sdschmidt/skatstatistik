@@ -8,10 +8,23 @@ import { db } from './db';
 import { spieltage } from './schema';
 import { eq } from 'drizzle-orm';
 
-export async function handleSpieltagSubmit(formData: FormData) {
+export async function handleSpieltagSubmit(formData: FormData, originalDatum?: string) {
 	const datum = String(formData.get('datum') ?? '');
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) {
 		return fail(400, { error: 'Ungültiges Datum.' });
+	}
+
+	// Date moved? Rename the row first; FK ON UPDATE CASCADE moves ergebnisse
+	// rows along with it, then upsertSpieltag updates the rest of the fields.
+	if (originalDatum && originalDatum !== datum) {
+		const [conflict] = await db
+			.select({ datum: spieltage.datum })
+			.from(spieltage)
+			.where(eq(spieltage.datum, datum));
+		if (conflict) {
+			return fail(400, { error: `Spieltag ${datum} existiert bereits.` });
+		}
+		await db.update(spieltage).set({ datum }).where(eq(spieltage.datum, originalDatum));
 	}
 
 	let players: { kuerzel: string; bommel: number; runden: number }[];

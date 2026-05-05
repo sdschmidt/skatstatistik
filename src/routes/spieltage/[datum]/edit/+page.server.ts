@@ -14,8 +14,8 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request }) => {
+	default: async ({ request, params }) => {
 		// TODO(auth): require role === 'admin'
-		return handleSpieltagSubmit(await request.formData());
+		return handleSpieltagSubmit(await request.formData(), params.datum);
 	}
 };

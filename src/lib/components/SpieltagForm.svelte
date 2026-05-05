@@ -11,8 +11,7 @@
 		initialPhotoPath = null,
 		initialPlayers = [{ kuerzel: '', bommel: 0, runden: 0 }],
 		allPlayers,
-		submitLabel = 'Speichern',
-		disableDatum = false
+		submitLabel = 'Speichern'
 	}: {
 		initialDatum: string;
 		initialNotes?: string;
@@ -20,7 +19,6 @@
 		initialPlayers?: PlayerRow[];
 		allPlayers: AllPlayer[];
 		submitLabel?: string;
-		disableDatum?: boolean;
 	} = $props();
 
 	// One-time snapshots: the parent doesn't mutate these for the lifetime of
@@ -131,10 +129,15 @@
 				id="datum"
 				type="date"
 				required
-				readonly={disableDatum}
 				bind:value={datum}
 				class="mt-1 rounded border border-gray-300 p-2 text-sm dark:border-gray-700 dark:bg-gray-800"
 			/>
+			{#if datum !== initialDatum}
+				<p class="mt-1 text-xs text-amber-600 dark:text-amber-500">
+					Datum wird geändert: <span class="font-mono">{initialDatum}</span> →
+					<span class="font-mono">{datum}</span>
+				</p>
+			{/if}
 		</div>
 
 		<div>

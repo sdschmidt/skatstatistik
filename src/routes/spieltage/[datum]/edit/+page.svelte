@@ -23,6 +23,5 @@
 		{initialPlayers}
 		allPlayers={data.allPlayers}
 		submitLabel="Speichern"
-		disableDatum
 	/>
 </div>

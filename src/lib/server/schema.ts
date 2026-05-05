@@ -35,7 +35,7 @@ export const ergebnisse = pgTable(
 	{
 		datum: date('datum')
 			.notNull()
-			.references(() => spieltage.datum, { onDelete: 'cascade' }),
+			.references(() => spieltage.datum, { onDelete: 'cascade', onUpdate: 'cascade' }),
 		playerId: uuid('player_id')
 			.notNull()
 			.references(() => players.id, { onDelete: 'restrict' }),

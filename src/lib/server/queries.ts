@@ -213,6 +213,28 @@ export async function statsByYear(
 	);
 }
 
+export async function statsAllTime(
+	sort: StatsSort = 'spieltage',
+	dir: 'asc' | 'desc' = 'desc'
+) {
+	const sortFrag = STATS_SORT_FRAGMENTS[sort] ?? STATS_SORT_FRAGMENTS.spieltage;
+	const dirFrag = dir === 'asc' ? sql`asc` : sql`desc`;
+	return db.execute<StatsRow>(
+		sql`select * from player_stats_all_time
+		    order by ${sortFrag} ${dirFrag} nulls last, kuerzel asc`
+	);
+}
+
+export async function allTimeTotals() {
+	const rows = await db.execute<{ spieltage: number; runden: number }>(
+		sql`select count(distinct s.datum)::int as spieltage,
+		           coalesce(sum(e.runden), 0)::int as runden
+		    from spieltage s
+		    left join ergebnisse e on e.datum = s.datum`
+	);
+	return rows[0] ?? { spieltage: 0, runden: 0 };
+}
+
 export async function yearTotals(year: number) {
 	const rows = await db.execute<{ spieltage: number; runden: number }>(
 		sql`select count(distinct s.datum)::int as spieltage,

@@ -15,6 +15,20 @@
       "when": 1777938797116,
       "tag": "0001_player_stats_view",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777957716086,
+      "tag": "0002_player_stats_all_time",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777957843040,
+      "tag": "0003_tiresome_ser_duncan",
+      "breakpoints": true
     }
   ]
 }
