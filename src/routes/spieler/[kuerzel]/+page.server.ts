@@ -1,9 +1,11 @@
 import { error } from '@sveltejs/kit';
 import {
+	availableYears,
 	ergebnisseBounds,
 	getPlayerByKuerzel,
 	listErgebnisse,
 	playerCalendar,
+	playerLatestYear,
 	playerSummary,
 	type ErgebnisseFilters
 } from '$server/queries';
@@ -40,12 +42,34 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		dir
 	};
 
+	// Calendar default: show only the player's most recent year of activity
+	// (falling back to the overall most recent year if they've never played).
+	// Date filter overrides this.
+	let calFrom = filters.from;
+	let calTo = filters.to;
+	if (!calFrom && !calTo) {
+		const [latest, allYears] = await Promise.all([playerLatestYear(player.id), availableYears()]);
+		const defaultYear = latest ?? allYears[0];
+		if (defaultYear !== undefined) {
+			calFrom = `${defaultYear}-01-01`;
+			calTo = `${defaultYear}-12-31`;
+		}
+	}
+
 	const [ergebnisse, summary, calendar, bounds] = await Promise.all([
 		listErgebnisse(filters),
 		playerSummary(player.id, filters),
-		playerCalendar(player.id, filters.from, filters.to),
+		playerCalendar(player.id, calFrom, calTo),
 		ergebnisseBounds()
 	]);
 
-	return { player, ergebnisse, summary, calendar, filters, bounds };
+	return {
+		player,
+		ergebnisse,
+		summary,
+		calendar,
+		calRange: { from: calFrom, to: calTo },
+		filters,
+		bounds
+	};
 };

@@ -219,6 +219,14 @@ export async function playerSummary(playerId: string, f: PlayerSummaryFilters) {
 	};
 }
 
+export async function playerLatestYear(playerId: string): Promise<number | null> {
+	const rows = await db.execute<{ y: number | null }>(
+		sql`select extract(year from max(datum))::int as y
+		    from ergebnisse where player_id = ${playerId}`
+	);
+	return rows[0]?.y ?? null;
+}
+
 export async function playerCalendar(playerId: string, from?: string, to?: string) {
 	// Every Spieltag in the date range, with this player's runden if they were
 	// there (NULL if they weren't). The calendar respects the date filter only;

@@ -141,9 +141,9 @@
 </dl>
 
 <!-- calendar -->
-<section class="mt-6 rounded border border-gray-200 p-4 dark:border-gray-700">
+<section class="mt-6">
 	<h2 class="mb-3 text-sm font-medium">Aktivität</h2>
-	<Calendar entries={calendar} from={filters.from} to={filters.to} />
+	<Calendar entries={calendar} from={data.calRange.from} to={data.calRange.to} />
 </section>
 
 <!-- filter -->

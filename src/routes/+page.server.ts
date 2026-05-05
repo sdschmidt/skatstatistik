@@ -31,13 +31,20 @@ export const load: PageServerLoad = async ({ url }) => {
 	const sort: StatsSort = sortRaw && VALID_SORTS.has(sortRaw) ? sortRaw : 'spieltage';
 	const dir: 'asc' | 'desc' = url.searchParams.get('dir') === 'asc' ? 'asc' : 'desc';
 
+	// Gesamt's calendar is limited to the most recent year — full-history
+	// activity in one strip would be repetitive and visually noisy.
+	const calendarYear = isAll ? years[0] : (year as number);
 	const [stats, totals, calendar] = isAll
-		? await Promise.all([statsAllTime(sort, dir), allTimeTotals(), spieltageWithTotals()])
+		? await Promise.all([
+				statsAllTime(sort, dir),
+				allTimeTotals(),
+				spieltageWithTotals(calendarYear)
+			])
 		: await Promise.all([
 				statsByYear(year as number, sort, dir),
 				yearTotals(year as number),
 				spieltageWithTotals(year as number)
 			]);
 
-	return { years, year, isAll, sort, dir, stats, totals, calendar };
+	return { years, year, isAll, sort, dir, stats, totals, calendar, calendarYear };
 };

@@ -106,7 +106,7 @@
 	</p>
 
 	{#if calendar.length > 0}
-		<section class="mt-4 rounded border border-gray-200 p-4 dark:border-gray-700">
+		<section class="mt-4">
 			<Calendar entries={calendar} />
 		</section>
 	{/if}
