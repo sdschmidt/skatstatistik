@@ -135,68 +135,69 @@
 		{@const months = monthLabels(y)}
 		<div>
 			<div class="mb-1 text-xs text-gray-500 dark:text-gray-400">{y}</div>
-			<div
-				class="inline-grid gap-x-1 gap-y-[2px]"
-				style="grid-template-columns: max-content auto;"
-			>
-				<!-- top-left corner -->
-				<div></div>
-				<!-- month labels row, 11px columns matching the cells below -->
+			<div class="-mx-4 overflow-x-auto px-4">
 				<div
-					class="grid gap-[2px]"
-					style="grid-template-columns: repeat({yc.cols}, 11px);"
+					class="inline-grid gap-x-1 gap-y-[2px]"
+					style="grid-template-columns: max-content auto;"
 				>
-					{#each months as ml (ml.month)}
-						<span
-							style="grid-column: {ml.col + 1};"
-							class="text-[9px] whitespace-nowrap text-gray-400 dark:text-gray-500"
-						>
-							{ml.month}
-						</span>
-					{/each}
-				</div>
-				<!-- weekday labels (Mo at row 1, Mi row 3, Fr row 5) -->
-				<div class="grid grid-rows-7 gap-[2px] pr-1 text-[9px] text-gray-400 dark:text-gray-500">
-					<span>Mo</span>
-					<span></span>
-					<span>Mi</span>
-					<span></span>
-					<span>Fr</span>
-					<span></span>
-					<span></span>
-				</div>
-				<!-- cells -->
-				<div
-					class="grid grid-flow-col grid-rows-7 gap-[2px] overflow-x-auto p-[5px]"
-					style="grid-template-columns: repeat({yc.cols}, 11px);"
-				>
-					{#each yc.cells as c, i (`${y}-${i}`)}
-						{#if c.kind === 'empty'}
-							<div></div>
-						{:else if c.isSpieltag && linkSpieltage}
-							<a
-								href="/spieltage/{c.date}"
-								class="size-[11px] rounded-sm {cellClass(c)} transition hover:brightness-125 hover:outline hover:outline-1 hover:outline-gray-900 dark:hover:outline-gray-100"
-								title={tooltip(c)}
-							></a>
-						{:else}
-							<div class="size-[11px] rounded-sm {cellClass(c)}" title={tooltip(c)}></div>
-						{/if}
-					{/each}
+					<!-- top-left corner -->
+					<div></div>
+					<!-- month labels row, 11px columns matching the cells below -->
+					<div class="grid gap-[2px]" style="grid-template-columns: repeat({yc.cols}, 11px);">
+						{#each months as ml (ml.month)}
+							<span
+								style="grid-column: {ml.col + 1};"
+								class="text-[9px] whitespace-nowrap text-gray-400 dark:text-gray-500"
+							>
+								{ml.month}
+							</span>
+						{/each}
+					</div>
+					<!-- weekday labels (Mo at row 1, Mi row 3, Fr row 5) -->
+					<div class="grid grid-rows-7 gap-[2px] pr-1 text-[9px] text-gray-400 dark:text-gray-500">
+						<span>Mo</span>
+						<span></span>
+						<span>Mi</span>
+						<span></span>
+						<span>Fr</span>
+						<span></span>
+						<span></span>
+					</div>
+					<!-- cells -->
+					<div
+						class="grid grid-flow-col grid-rows-7 gap-[2px] p-[5px]"
+						style="grid-template-columns: repeat({yc.cols}, 11px);"
+					>
+						{#each yc.cells as c, i (`${y}-${i}`)}
+							{#if c.kind === 'empty'}
+								<div></div>
+							{:else if c.isSpieltag && linkSpieltage}
+								<a
+									href="/spieltage/{c.date}"
+									class="size-[11px] rounded-sm {cellClass(c)} transition hover:brightness-125 hover:outline hover:outline-1 hover:outline-gray-900 dark:hover:outline-gray-100"
+									title={tooltip(c)}
+								></a>
+							{:else}
+								<div class="size-[11px] rounded-sm {cellClass(c)}" title={tooltip(c)}></div>
+							{/if}
+						{/each}
+					</div>
 				</div>
 			</div>
 		</div>
 	{/each}
 
-	<div class="mt-2 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-		<span>weniger</span>
-		<span class="size-[11px] rounded-sm bg-gray-100 dark:bg-gray-800"></span>
-		<span class="size-[11px] rounded-sm bg-blue-200 dark:bg-blue-900"></span>
-		<span class="size-[11px] rounded-sm bg-blue-400 dark:bg-blue-700"></span>
-		<span class="size-[11px] rounded-sm bg-blue-600 dark:bg-blue-500"></span>
-		<span class="size-[11px] rounded-sm bg-blue-800 dark:bg-blue-300"></span>
-		<span>mehr Runden</span>
-		<span class="ml-3 inline-flex items-center gap-1">
+	<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+		<span class="inline-flex items-center gap-1.5">
+			<span>weniger</span>
+			<span class="size-[11px] rounded-sm bg-gray-100 dark:bg-gray-800"></span>
+			<span class="size-[11px] rounded-sm bg-blue-200 dark:bg-blue-900"></span>
+			<span class="size-[11px] rounded-sm bg-blue-400 dark:bg-blue-700"></span>
+			<span class="size-[11px] rounded-sm bg-blue-600 dark:bg-blue-500"></span>
+			<span class="size-[11px] rounded-sm bg-blue-800 dark:bg-blue-300"></span>
+			<span>mehr Runden</span>
+		</span>
+		<span class="inline-flex items-center gap-1">
 			<span class="size-[11px] rounded-sm bg-gray-200 ring-1 ring-gray-300 dark:bg-gray-700 dark:ring-gray-600"></span>
 			Spieltag, nicht gespielt
 		</span>
