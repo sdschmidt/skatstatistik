@@ -25,6 +25,9 @@ dist/
 # Local photo store (dev)
 data/
 
+# Local one-off import scratch space
+import_one_off/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
