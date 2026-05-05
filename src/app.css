@@ -6,3 +6,16 @@
 @plugin 'flowbite/plugin';
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Apply theme background to <html> and <body> so overscroll / scrollbar gutters
+ * (and any space below short pages) don't flash white in dark mode. */
+@layer base {
+	html,
+	body {
+		@apply bg-gray-50 text-gray-900;
+	}
+	html.dark,
+	html.dark body {
+		@apply bg-gray-900 text-gray-100;
+	}
+}
