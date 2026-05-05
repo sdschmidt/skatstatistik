@@ -76,7 +76,8 @@
 </table>
 
 <p class="mt-4 text-xs text-gray-500">
-	Neue Konten landen als <code>pending</code>. Auf <code>user</code> setzen gibt Lese-Zugriff
-	und das Anlegen neuer Spieltage frei. <code>admin</code> darf zusätzlich bearbeiten,
-	löschen und Rollen vergeben.
+	Lesezugriff ist für alle offen. Neue Konten landen als <code>pending</code> (inaktiv —
+	können nur lesen). Auf <code>user</code> setzen gibt Schreibzugriff: Spieltage und Spieler
+	anlegen oder bearbeiten. <code>admin</code> darf zusätzlich Spieltage löschen und Rollen
+	vergeben.
 </p>

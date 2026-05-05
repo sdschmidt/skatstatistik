@@ -29,7 +29,7 @@
 		});
 		busy = false;
 		if (err) {
-			error = err.message ?? 'Konnte den Magic Link nicht senden.';
+			error = err.message ?? 'Konnte den Anmeldelink nicht senden.';
 		} else {
 			sent = true;
 		}
@@ -64,7 +64,7 @@
 
 	{#if sent}
 		<div class="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-			Magic Link wurde an <strong>{email}</strong> gesendet. Schaue im Posteingang nach.
+			Anmeldelink wurde an <strong>{email}</strong> gesendet. Schaue im Posteingang nach.
 		</div>
 		<button
 			type="button"
@@ -99,7 +99,7 @@
 				disabled={busy || !email}
 				class="w-full rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
 			>
-				{busy ? 'Sende…' : 'Magic Link senden'}
+				{busy ? 'Sende…' : 'Anmeldelink senden'}
 			</button>
 		</form>
 	{/if}
@@ -109,7 +109,7 @@
 	{/if}
 
 	<p class="text-center text-xs text-gray-500 dark:text-gray-400">
-		Lesezugriff ist offen. Anmelden brauchst du nur, um Spieltage und Spieler hinzuzufügen
-		oder zu bearbeiten.
+		Lesezugriff ist offen. Neue Konten müssen von einem Admin freigegeben werden,
+		bevor sie Spieltage oder Spieler ändern können.
 	</p>
 </div>

@@ -56,7 +56,7 @@
 								href="/auth/pending"
 								class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950"
 							>
-								gesperrt
+								inaktiv
 							</a>
 						{/if}
 						<button
@@ -131,7 +131,7 @@
 					{#if data.user}
 						<div class="px-2 pb-1 text-xs text-gray-500 dark:text-gray-400">
 							{data.user.name || data.user.email}
-							{#if data.user.role === 'pending'}<span class="ml-1 rounded bg-amber-100 px-1.5 text-[10px] text-amber-800 dark:bg-amber-900 dark:text-amber-200">gesperrt</span>{/if}
+							{#if data.user.role === 'pending'}<span class="ml-1 rounded bg-amber-100 px-1.5 text-[10px] text-amber-800 dark:bg-amber-900 dark:text-amber-200">inaktiv</span>{/if}
 						</div>
 						<button
 							type="button"
