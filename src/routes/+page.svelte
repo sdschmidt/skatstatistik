@@ -176,6 +176,18 @@
 			</tbody>
 		</table>
 
+		{@const drillFrom = isAll ? '' : `${year}-01-01`}
+		{@const drillTo = isAll ? '' : `${year}-12-31`}
+		{@const drillQs = isAll ? '' : `?from=${drillFrom}&to=${drillTo}`}
+		<div class="mt-3 flex gap-4 text-sm">
+			<a class="text-blue-700 hover:underline dark:text-blue-400" href="/spieltage{drillQs}">
+				→ Alle Spieltage{isAll ? '' : ` ${year}`}
+			</a>
+			<a class="text-blue-700 hover:underline dark:text-blue-400" href="/runden{drillQs}">
+				→ Alle Runden{isAll ? '' : ` ${year}`}
+			</a>
+		</div>
+
 		<div class="mt-8 grid gap-6 lg:grid-cols-2">
 			<div class="rounded border border-gray-200 p-3 dark:border-gray-700 dark:bg-gray-900">
 				{#key heading}
