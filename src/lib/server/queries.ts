@@ -165,21 +165,63 @@ export async function deleteSpieltag(datum: string): Promise<void> {
 	await db.delete(spieltage).where(eq(spieltage.datum, datum));
 }
 
-export async function statsByYear(year: number) {
-	return db.execute<{
-		year: number;
-		player_id: string;
-		kuerzel: string;
-		name: string | null;
-		spieltage: number;
-		runden: number;
-		bommel: number;
-		bommel_per_runde: string | null;
-		gewinnrate: string | null;
-		anwesenheit: string | null;
-	}>(
-		sql`select * from player_stats_by_year where year = ${year} order by spieltage desc, kuerzel`
+export type StatsRow = {
+	year: number;
+	player_id: string;
+	kuerzel: string;
+	name: string | null;
+	spieltage: number;
+	runden: number;
+	bommel: number;
+	bommel_per_runde: string | null;
+	gewinnrate: string | null;
+	anwesenheit: string | null;
+};
+
+export type StatsSort =
+	| 'kuerzel'
+	| 'name'
+	| 'spieltage'
+	| 'runden'
+	| 'bommel'
+	| 'bommel_per_runde'
+	| 'gewinnrate'
+	| 'anwesenheit';
+
+const STATS_SORT_FRAGMENTS: Record<StatsSort, ReturnType<typeof sql>> = {
+	kuerzel: sql`kuerzel`,
+	name: sql`name`,
+	spieltage: sql`spieltage`,
+	runden: sql`runden`,
+	bommel: sql`bommel`,
+	bommel_per_runde: sql`bommel_per_runde`,
+	gewinnrate: sql`gewinnrate`,
+	anwesenheit: sql`anwesenheit`
+};
+
+export async function statsByYear(
+	year: number,
+	sort: StatsSort = 'spieltage',
+	dir: 'asc' | 'desc' = 'desc'
+) {
+	const sortFrag = STATS_SORT_FRAGMENTS[sort] ?? STATS_SORT_FRAGMENTS.spieltage;
+	const dirFrag = dir === 'asc' ? sql`asc` : sql`desc`;
+	return db.execute<StatsRow>(
+		sql`select * from player_stats_by_year
+		    where year = ${year}
+		    order by ${sortFrag} ${dirFrag} nulls last, kuerzel asc`
 	);
+}
+
+export async function yearTotals(year: number) {
+	const rows = await db.execute<{ spieltage: number; runden: number }>(
+		sql`select count(distinct s.datum)::int as spieltage,
+		           coalesce(sum(e.runden), 0)::int as runden
+		    from spieltage s
+		    left join ergebnisse e on e.datum = s.datum
+		    where extract(year from s.datum)::int = ${year}`
+	);
+	return rows[0] ?? { spieltage: 0, runden: 0 };
 }
 
 export async function availableYears(): Promise<number[]> {
