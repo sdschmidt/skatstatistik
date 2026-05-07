@@ -73,7 +73,7 @@
 <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
 	<div class="group rounded border border-teal-300 p-3 transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 hover:shadow-sm dark:border-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-950/60">
 		<dt class="flex items-center gap-1.5 text-xs text-teal-700 transition-colors group-hover:text-teal-800 dark:text-teal-300 dark:group-hover:text-teal-200">
-			<Users class="size-3.5" /> Spieler
+			<Users class="size-3.5" /> Kürzel
 		</dt>
 		<dd class="mt-1 text-lg font-semibold tabular-nums">{spielerCount}</dd>
 		{#if spielerDelta !== null && seasonAvg !== null}
